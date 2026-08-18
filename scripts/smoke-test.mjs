@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ZernFlow End-to-End Smoke Test
+ * MegaChat End-to-End Smoke Test
  *
  * This script:
  * 1. Creates a simple test flow (trigger -> send message)
@@ -11,7 +11,7 @@
  *
  * Usage:
  *   node scripts/smoke-test.mjs [base-url]
- *   node scripts/smoke-test.mjs https://zernflow.vercel.app
+ *   node scripts/smoke-test.mjs https://your-megachat.vercel.app
  *   node scripts/smoke-test.mjs http://localhost:3000
  */
 
@@ -34,7 +34,7 @@ for (const line of readFileSync(envPath, "utf8").split("\n")) {
   if (!process.env[key]) process.env[key] = val;
 }
 
-const BASE_URL = process.argv[2] || "https://zernflow.vercel.app";
+const BASE_URL = process.argv[2] || "https://your-megachat.vercel.app";
 const WORKSPACE_ID = "1ed7f49a-79d9-42e5-a79d-0ea9e3b957b1";
 
 // Use the telegram channel (simplest for testing)
@@ -81,7 +81,7 @@ async function setup() {
       position: { x: 250, y: 150 },
       data: {
         label: "Smoke Test Reply",
-        messages: [{ text: "Smoke test passed! ZernFlow is working." }],
+        messages: [{ text: "Smoke test passed! MegaChat is working." }],
       },
     },
   ];
@@ -311,7 +311,7 @@ async function cleanup() {
 
 async function main() {
   console.log("\n========================================");
-  console.log("  ZernFlow End-to-End Smoke Test");
+  console.log("  MegaChat End-to-End Smoke Test");
   console.log(`  Target: ${BASE_URL}`);
   console.log("========================================\n");
 

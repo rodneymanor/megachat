@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   XCircle,
   UserPlus,
-  ListOrdered,
   Send,
   Zap,
 } from "lucide-react";
@@ -46,7 +45,6 @@ const stepIcons: Record<string, typeof MessageSquare> = {
   smart_delay: Clock,
   human_takeover: Hand,
   go_to_flow: ArrowRight,
-  enroll_sequence: ListOrdered,
   subscribe: UserPlus,
   unsubscribe: UserPlus,
   comment_reply: Send,
@@ -71,8 +69,6 @@ const stepColors: Record<string, string> = {
   human_takeover:
     "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950",
   go_to_flow: "text-cyan-600 bg-cyan-50 dark:text-cyan-400 dark:bg-cyan-950",
-  enroll_sequence:
-    "text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-950",
   subscribe: "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950",
   unsubscribe: "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950",
   comment_reply:
@@ -239,14 +235,6 @@ export function TestPanel({
         return (
           <p className="text-xs text-muted-foreground">
             Would jump to flow: <span className="font-mono">{r.flowId}</span>
-          </p>
-        );
-
-      case "enroll_sequence":
-        return (
-          <p className="text-xs text-muted-foreground">
-            Would enroll in sequence:{" "}
-            <span className="font-mono">{r.sequenceId}</span>
           </p>
         );
 

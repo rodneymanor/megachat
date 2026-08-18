@@ -1,5 +1,3 @@
-import type { Platform } from "@/lib/types/database";
-
 interface QuickReply {
   title: string;
   payload: string;
@@ -66,10 +64,15 @@ const WHATSAPP_MAX_REPLY_BUTTONS = 3;
  * WhatsApp: Reply buttons only, so carousels and link buttons become text.
  * Telegram: Buttons become inline keyboard, carousels become multiple messages.
  * Twitter/X, Bluesky, Reddit: Interactive elements become numbered text options.
+ *
+ * This build's UI and channels table only produce "instagram", but the
+ * platform parameter stays a plain string (rather than the narrowed
+ * Instagram-only `Platform` type) so this defensive multi-platform handling
+ * keeps compiling as-is; see lib/platforms.ts.
  */
 export function adaptMessage(
   content: MessageContent,
-  platform: Platform
+  platform: string
 ): AdaptedMessage {
   switch (platform) {
     case "facebook":

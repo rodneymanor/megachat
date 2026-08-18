@@ -4,7 +4,6 @@ import { useCallback } from "react";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NodeType } from "@/lib/types/database";
-import { EnrollSequencePanel } from "./EnrollSequencePanel";
 
 interface ActionPanelData {
   actionType?: NodeType;
@@ -24,7 +23,6 @@ interface ActionPanelData {
   timeout?: number;
   timeoutUnit?: string;
   confirmed?: boolean;
-  sequenceId?: string;
   [key: string]: unknown;
 }
 
@@ -61,8 +59,6 @@ export function ActionPanel({ data: rawData, onChange }: ActionPanelProps) {
       return <ABSplitConfig data={data} onChange={onChange} />;
     case "smartDelay":
       return <SmartDelayConfig data={data} onChange={onChange} />;
-    case "enrollSequence":
-      return <EnrollSequencePanel data={rawData} onChange={onChange} />;
     default:
       return (
         <p className="text-sm text-muted-foreground">
@@ -327,8 +323,8 @@ function SubscribeConfig({ data, onChange }: ActionSubPanelProps) {
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {isSubscribe
-            ? "This will mark the contact as subscribed. They will receive broadcasts and automated messages."
-            : "This will mark the contact as unsubscribed. They will stop receiving broadcasts and most automated messages."}
+            ? "This will mark the contact as subscribed to automated messages."
+            : "This will mark the contact as unsubscribed. They will stop receiving most automated messages."}
         </p>
       </div>
 

@@ -7,6 +7,12 @@ import { PLATFORMS, PLATFORM_LABELS, isSupportedPlatform, platformLabel } from "
  * Issue #16: the channel picker offered WhatsApp, the connect route rejected it
  * and the channels check constraint could not have stored it anyway. Each layer
  * carried its own copy of the list. These tests pin them to PLATFORMS.
+ *
+ * This build (the Instagram comment-to-DM core) intentionally narrows
+ * PLATFORMS to Instagram only, even though the channels table's check
+ * constraint still allows the platforms the full MegaChat schema supports
+ * (harmless unused columns/values). So PLATFORMS only needs to be a *subset*
+ * of what the DB will accept, not an exact match.
  */
 describe("platform allowlist", () => {
   it("labels every supported platform", () => {
@@ -16,21 +22,25 @@ describe("platform allowlist", () => {
   });
 
   it("accepts supported platforms and rejects everything else", () => {
-    expect(isSupportedPlatform("whatsapp")).toBe(true);
     expect(isSupportedPlatform("instagram")).toBe(true);
-    // Zernio connects these, ZernFlow has no inbox for them.
+    // This build only drives Instagram; Zernio connects the rest but there's
+    // no UI or inbox for them here.
+    expect(isSupportedPlatform("whatsapp")).toBe(false);
     expect(isSupportedPlatform("tiktok")).toBe(false);
     expect(isSupportedPlatform("youtube")).toBe(false);
     expect(isSupportedPlatform(undefined)).toBe(false);
   });
 
   it("falls back to a capitalised name for unknown platforms", () => {
-    expect(platformLabel("whatsapp")).toBe("WhatsApp");
+    expect(platformLabel("whatsapp")).toBe("Whatsapp");
     expect(platformLabel("tiktok")).toBe("Tiktok");
   });
 
-  it("matches the channels platform check constraint", () => {
-    expect(latestChannelsPlatformConstraint()).toEqual([...PLATFORMS].sort());
+  it("every supported platform is allowed by the channels check constraint", () => {
+    const allowed = latestChannelsPlatformConstraint();
+    for (const platform of PLATFORMS) {
+      expect(allowed).toContain(platform);
+    }
   });
 
   it("keeps ALL_MIGRATIONS.sql a faithful in-order copy of every migration", () => {

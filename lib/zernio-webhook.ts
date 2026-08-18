@@ -1,7 +1,7 @@
 /**
  * Zernio webhook auto-registration.
  *
- * Zernflow must register its own `/api/webhooks/late` endpoint in Zernio so that
+ * MegaChat must register its own `/api/webhooks/late` endpoint in Zernio so that
  * inbound events (DMs, comments) are delivered to the Inbox. Zernio exposes a
  * single webhook per profile/API key, so this is idempotent and operates at the
  * workspace level (the secret lives on `workspaces.webhook_secret`).
@@ -11,14 +11,14 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Zernio } from "./zernio-client";
 
-/** Name used to identify Zernflow's webhook among a profile's webhooks. */
-export const WEBHOOK_NAME = "Zernflow";
+/** Name used to identify MegaChat's webhook among a profile's webhooks. */
+export const WEBHOOK_NAME = "MegaChat";
 
-/** Events Zernflow needs delivered to its webhook. */
+/** Events MegaChat needs delivered to its webhook. */
 export type WebhookEvent = "message.received" | "comment.received";
 
 export interface EnsureWebhookOptions {
-  /** Public base URL of this Zernflow deployment (e.g. NEXT_PUBLIC_APP_URL). */
+  /** Public base URL of this MegaChat deployment (e.g. NEXT_PUBLIC_APP_URL). */
   appUrl: string;
   /** Workspace-level HMAC secret used to verify webhook signatures. */
   secret: string;
@@ -62,7 +62,7 @@ function samePath(a: string | undefined, b: string): boolean {
 }
 
 /**
- * Ensures Zernflow's webhook is registered in Zernio and up to date.
+ * Ensures MegaChat's webhook is registered in Zernio and up to date.
  *
  * - No webhook found → create it.
  * - Found but URL differs or an event is missing → update it.

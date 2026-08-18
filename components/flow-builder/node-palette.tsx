@@ -14,7 +14,6 @@ import {
   Shuffle,
   Hourglass,
   Sparkles,
-  ListOrdered,
 } from "lucide-react";
 import type { DragEvent } from "react";
 
@@ -134,13 +133,6 @@ const categories: PaletteCategory[] = [
         label: "Unsubscribe",
         icon: Bell,
         actionType: "unsubscribe",
-      },
-      {
-        type: "action",
-        nodeType: "enrollSequence",
-        label: "Enroll in Sequence",
-        icon: ListOrdered,
-        actionType: "enrollSequence",
       },
     ],
   },

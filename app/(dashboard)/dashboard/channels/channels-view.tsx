@@ -32,20 +32,6 @@ function getDmLink(platform: Platform, username: string | null): { url: string |
   switch (platform) {
     case "instagram":
       return handle ? { url: `https://ig.me/m/${handle}`, label: `ig.me/m/${handle}` } : { url: null, label: "" };
-    case "facebook":
-      return handle ? { url: `https://m.me/${handle}`, label: `m.me/${handle}` } : { url: null, label: "" };
-    case "telegram":
-      return handle ? { url: `https://t.me/${handle}`, label: `t.me/${handle}` } : { url: null, label: "" };
-    case "twitter":
-      return handle ? { url: `https://x.com/${handle}`, label: `x.com/${handle}` } : { url: null, label: "" };
-    case "reddit":
-      return handle ? { url: `https://reddit.com/message/compose/?to=${handle}`, label: `reddit.com/.../to=${handle}` } : { url: null, label: "" };
-    case "whatsapp": {
-      // Zernio stores WhatsApp numbers display-formatted ("+34 902 80 82 90");
-      // wa.me rejects anything but digits.
-      const digits = handle.replace(/\D/g, "");
-      return digits ? { url: `https://wa.me/${digits}`, label: `wa.me/${digits}` } : { url: null, label: "" };
-    }
     default:
       return { url: null, label: "" };
   }
@@ -138,7 +124,7 @@ export function ChannelsView({
         setSyncMessage(`Could not save some channels: ${failed.join("; ")}`);
       } else if (nothingChanged && syncedChannels.length === 0 && skipped.length > 0) {
         setSyncMessage(
-          `Nothing to connect: ZernFlow does not support ${skipped.join(", ")}`
+          `Nothing to connect: MegaChat does not support ${skipped.join(", ")}`
         );
       } else if (nothingChanged) {
         setSyncMessage("All channels up to date");
@@ -454,7 +440,7 @@ export function ChannelsView({
           channelToDelete?.display_name ??
           channelToDelete?.username ??
           (channelToDelete ? platformLabel(channelToDelete.platform) : "this channel")
-        } from Zernio and permanently deletes its conversations, contact links, and stats in Zernflow. This cannot be undone.`}
+        } from Zernio and permanently deletes its conversations, contact links, and stats in MegaChat. This cannot be undone.`}
         confirmLabel="Delete"
         destructive
         onConfirm={handleDelete}

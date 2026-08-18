@@ -36,7 +36,6 @@ export type SimulationStepResult =
   | { type: "smart_delay" }
   | { type: "human_takeover" }
   | { type: "go_to_flow"; flowId: string }
-  | { type: "enroll_sequence"; sequenceId: string }
   | { type: "comment_reply"; text: string }
   | { type: "private_reply"; text: string }
   | { type: "subscribe" | "unsubscribe" }
@@ -416,17 +415,6 @@ export function simulateFlow(
           result: { type: "go_to_flow", flowId },
         });
         shouldPause = true;
-        break;
-      }
-
-      case "enrollSequence": {
-        const sequenceId = (data.sequenceId as string) || "unknown";
-        steps.push({
-          nodeId: node.id,
-          nodeType: "enrollSequence",
-          nodeLabel: label,
-          result: { type: "enroll_sequence", sequenceId },
-        });
         break;
       }
 

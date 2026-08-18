@@ -1,5 +1,5 @@
 -- =============================================
--- ZERNFLOW - COMBINED MIGRATIONS
+-- MEGACHAT - COMBINED MIGRATIONS
 -- Generated from supabase/migrations/*.sql, in order.
 -- Paste this entire file into Supabase SQL Editor
 -- https://supabase.com/dashboard/project/_/sql/new

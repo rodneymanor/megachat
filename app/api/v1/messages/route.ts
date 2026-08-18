@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     const messageId = (res.data as any)?.data?.messageId ?? null;
 
-    // Update conversation's last message info (ZernFlow-specific metadata)
+    // Update conversation's last message info (MegaChat-specific metadata)
     await supabase
       .from("conversations")
       .update({

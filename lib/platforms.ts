@@ -1,28 +1,15 @@
 /**
- * The platforms ZernFlow can drive. Zernio itself connects many more (TikTok,
- * YouTube, LinkedIn, ads accounts...), but only these expose the DM inbox that
- * flows, sequences and broadcasts are built on, so account sync skips the rest.
+ * The platforms MegaChat can drive. Zernio itself connects many more
+ * (Facebook, WhatsApp, Twitter, Telegram, Bluesky, Reddit, TikTok, YouTube,
+ * LinkedIn, ads accounts...), but this build only offers the Instagram
+ * comment-to-DM flow, so account sync and the channel picker skip the rest.
  */
-export const PLATFORMS = [
-  "instagram",
-  "facebook",
-  "whatsapp",
-  "twitter",
-  "telegram",
-  "bluesky",
-  "reddit",
-] as const;
+export const PLATFORMS = ["instagram"] as const;
 
 export type Platform = (typeof PLATFORMS)[number];
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
   instagram: "Instagram",
-  facebook: "Facebook",
-  whatsapp: "WhatsApp",
-  twitter: "X / Twitter",
-  telegram: "Telegram",
-  bluesky: "Bluesky",
-  reddit: "Reddit",
 };
 
 export function isSupportedPlatform(value: unknown): value is Platform {

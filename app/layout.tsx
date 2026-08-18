@@ -1,30 +1,40 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Archivo, Space_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const archivo = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo",
+  weight: ["400", "500", "600", "700", "800", "900"],
+});
+
+const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  variable: "--font-space-mono",
+  weight: ["400", "700"],
+});
 
 export const metadata: Metadata = {
   title: {
-    default: "ZernFlow - The Open Source ManyChat Alternative",
-    template: "%s | ZernFlow",
+    default: "MegaChat - The Open Source Instagram Comment-to-DM Engine",
+    template: "%s | MegaChat",
   },
   description:
-    "Automate DMs, comments, and flows across Instagram, Facebook, WhatsApp, Telegram, X, Bluesky, and Reddit. Free, self-hostable, and open source.",
-  metadataBase: new URL("https://zernflow.com"),
+    "Comment a keyword, get a DM. MegaChat is a free, self-hostable, open source Instagram comment-to-DM engine powered by Zernio.",
+  metadataBase: new URL("https://github.com/rodneymanor/megachat"),
   openGraph: {
-    title: "ZernFlow - The Open Source ManyChat Alternative",
+    title: "MegaChat - The Open Source Instagram Comment-to-DM Engine",
     description:
-      "Automate DMs, comments, and flows across Instagram, Facebook, WhatsApp, Telegram, X, Bluesky, and Reddit. Free, self-hostable, and open source.",
-    url: "https://zernflow.com",
-    siteName: "ZernFlow",
+      "Comment a keyword, get a DM. MegaChat is a free, self-hostable, open source Instagram comment-to-DM engine powered by Zernio.",
+    url: "https://github.com/rodneymanor/megachat",
+    siteName: "MegaChat",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ZernFlow - The Open Source ManyChat Alternative",
+    title: "MegaChat - The Open Source Instagram Comment-to-DM Engine",
     description:
-      "Automate DMs, comments, and flows across 7 platforms. Free, self-hostable, open source.",
+      "Comment a keyword, get a DM. Free, self-hostable, open source.",
   },
   icons: {
     icon: [
@@ -50,7 +60,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={`${archivo.variable} ${spaceMono.variable} font-sans antialiased`}>{children}</body>
     </html>
   );
 }

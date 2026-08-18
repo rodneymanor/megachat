@@ -1,7 +1,7 @@
 import type { Json, TriggerType } from "@/lib/types/database";
 
-/** The trigger types the flow builder owns. Growth-tab rows are channel-scoped
- *  and are never produced (or reconciled) from a node graph. */
+/** The trigger types the flow builder owns. Channel-scoped rows created
+ *  outside the flow builder are never produced (or reconciled) from a node graph. */
 export const BUILDER_TRIGGER_TYPES = [
   "keyword",
   "postback",

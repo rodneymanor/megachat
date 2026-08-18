@@ -60,11 +60,11 @@ function fakeZernio(existing: Array<Record<string, unknown>>) {
 }
 
 const opts = {
-  appUrl: "https://app.zernflow.test",
+  appUrl: "https://app.megachat.test",
   secret: "s3cr3t",
   events: ["message.received", "comment.received"] as const,
 };
-const EXPECTED_URL = "https://app.zernflow.test/api/webhooks/late";
+const EXPECTED_URL = "https://app.megachat.test/api/webhooks/late";
 
 describe("ensureWebhookRegistered", () => {
   it("creates the webhook when none exists (AC1)", async () => {
@@ -153,7 +153,7 @@ describe("ensureWebhookRegistered", () => {
     await ensureWebhookRegistered(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       z.client as any,
-      { ...opts, appUrl: "https://app.zernflow.test\n", events: [...opts.events] },
+      { ...opts, appUrl: "https://app.megachat.test\n", events: [...opts.events] },
     );
 
     expect(z.create).toHaveBeenCalledWith({
@@ -173,7 +173,7 @@ describe("ensureWebhookRegistered", () => {
     const res = await ensureWebhookRegistered(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       z.client as any,
-      { ...opts, appUrl: "https://app.zernflow.test/", events: [...opts.events] },
+      { ...opts, appUrl: "https://app.megachat.test/", events: [...opts.events] },
     );
 
     expect(res.action).toBe("unchanged");
@@ -183,7 +183,7 @@ describe("ensureWebhookRegistered", () => {
     const z = fakeZernio([
       {
         _id: "wh9",
-        name: "ZernFlow comments+DM to Sam",
+        name: "MegaChat comments+DM to Sam",
         url: `${EXPECTED_URL}?x-vercel-protection-bypass=tok`,
         events: ["message.received", "comment.received"],
       },

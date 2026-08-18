@@ -30,8 +30,7 @@ export type NodeData =
   | SubscribeNodeData
   | CommentReplyNodeData
   | PrivateReplyNodeData
-  | AiResponseNodeData
-  | EnrollSequenceNodeData;
+  | AiResponseNodeData;
 
 export interface TriggerNodeData {
   triggerType: string;
@@ -147,11 +146,6 @@ export interface AiResponseNodeData {
    * {{ai_response}} without double-sending. Defaults to true for back-compat.
    */
   sendDirectly?: boolean;
-}
-
-export interface EnrollSequenceNodeData {
-  /** The ID of the sequence to enroll the contact into */
-  sequenceId: string;
 }
 
 export interface FlowExecutionContext {

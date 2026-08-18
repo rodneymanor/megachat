@@ -50,8 +50,7 @@ export type NodeType =
   | "privateReply"
   | "abSplit"
   | "smartDelay"
-  | "aiResponse"
-  | "enrollSequence";
+  | "aiResponse";
 
 export type SequenceStatus = "draft" | "active" | "paused";
 export type SequenceEnrollmentStatus = "active" | "completed" | "cancelled";

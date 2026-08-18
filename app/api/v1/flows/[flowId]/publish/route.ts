@@ -66,17 +66,17 @@ export async function POST(
   // but the builder only ever saved keywords into flows.nodes — so triggers configured
   // in the UI never fired in production. Reconcile them here on publish. This includes
   // `comment_keyword`: builder-created rows are workspace-wide (channel_id null), while
-  // Growth-tab rows are channel-scoped (channel_id set) and must survive republish —
-  // hence the null-channel guard on the delete below. A comment_keyword node with
-  // "also match in DMs" emits a second row typed `keyword` (see below), so both rows
-  // are reconciled together on every republish.
+  // channel-scoped rows (channel_id set) are created outside the flow builder and must
+  // survive republish — hence the null-channel guard on the delete below. A
+  // comment_keyword node with "also match in DMs" emits a second row typed `keyword`
+  // (see below), so both rows are reconciled together on every republish.
   const flowNodes = Array.isArray(flow.nodes) ? (flow.nodes as Array<Record<string, unknown>>) : [];
   const desiredTriggers = buildDesiredTriggers(flowNodes, flowId);
 
   // Reconcile: clear the builder-managed trigger rows for this flow, then insert the
   // fresh set derived from the current node graph (delete-and-reinsert keeps the table
   // in sync with what was published and avoids duplicates on republish). Only
-  // null-channel rows are builder-managed; channel-scoped rows belong to the Growth tab.
+  // null-channel rows are builder-managed; channel-scoped rows are managed elsewhere.
   await supabase
     .from("triggers")
     .delete()
