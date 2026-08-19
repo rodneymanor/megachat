@@ -24,6 +24,7 @@ interface WorkspaceSettings {
   hasApiKey: boolean;
   hasAiKey: boolean;
   globalKeywords: string[];
+  hostedMode: boolean;
 }
 
 interface TestResult {
@@ -116,22 +117,15 @@ export function SettingsView({
     try {
       const supabase = createClient();
 
-      const update: Record<string, unknown> = {
-        name: name.trim(),
-        global_keywords: keywords,
-      };
-
-      // Only update keys if user entered new ones
-      if (apiKey.trim()) {
-        update.late_api_key_encrypted = apiKey.trim();
-      }
-      if (aiKey.trim()) {
-        update.ai_api_key = aiKey.trim();
-      }
-
+      // name/global_keywords are grant-writable straight from the browser
+      // (migration 00020). Keys go through the server-side route below —
+      // the browser has no write access to those columns any more.
       const { error: updateError } = await supabase
         .from("workspaces")
-        .update(update)
+        .update({
+          name: name.trim(),
+          global_keywords: keywords,
+        })
         .eq("id", workspace.id)
         .select("id")
         .single();
@@ -139,6 +133,25 @@ export function SettingsView({
       if (updateError) {
         console.error("Settings save error:", updateError);
         throw new Error(updateError.message);
+      }
+
+      const trimmedApiKey = apiKey.trim();
+      const trimmedAiKey = aiKey.trim();
+      if (trimmedApiKey || trimmedAiKey) {
+        const res = await fetch("/api/v1/workspace/keys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: workspace.id,
+            ...(trimmedApiKey ? { zernioKey: trimmedApiKey } : {}),
+            ...(trimmedAiKey ? { aiKey: trimmedAiKey } : {}),
+          }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Failed to save keys (${res.status})`);
+        }
       }
 
       setSaved(true);
@@ -298,7 +311,12 @@ export function SettingsView({
               <h2 className="text-sm font-semibold">AI Gateway</h2>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Required for the AI Response flow node. Uses{" "}
+              {workspace.hostedMode ? (
+                "Required on this hosted instance — AI Response nodes are skipped until you add your own AI Gateway key. "
+              ) : (
+                "Required for the AI Response flow node. "
+              )}
+              Uses{" "}
               <a
                 href="https://vercel.com/ai-gateway"
                 target="_blank"

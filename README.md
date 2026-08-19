@@ -42,6 +42,8 @@ npm run dev
 
 `npm run setup` is an interactive installer: it walks you through grabbing your Supabase credentials, runs all database migrations for you, and writes your `.env`. No SQL editor, no copy-pasting migration files.
 
+Want to see every question the installer asks — and exactly where each answer lives in the Supabase dashboard — before you run it? Read the [Setup Guide](SETUP.md).
+
 > **Why do some migrations mention sequences, broadcasts, or WhatsApp?** MegaChat keeps its database schema identical to upstream [ZernFlow](https://github.com/zernio-dev/zernflow), so upstream fixes merge cleanly. Tables for features this build doesn't ship just sit empty — they cost nothing.
 
 Then open [http://localhost:3000](http://localhost:3000):
@@ -59,6 +61,14 @@ Notes:
 
 - The deploy button sets env vars but doesn't run database migrations — run `npm run setup` locally once first.
 - The job scheduler cron (`/api/cron/jobs`, powers flow **delay** steps) is configured for every minute, which needs Vercel Pro. On the free Hobby plan crons run once a day — instant replies and comment-to-DM work fine either way; only long delay steps get batched.
+
+## Deployment modes
+
+Your deployment is public on the internet, so by default it's **single-tenant**: the first account you register becomes the owner, and the database blocks every signup after that — email and GitHub OAuth both. Without this, anyone who found your URL could register on it and start burning your Supabase and Zernio quota. Nothing to configure — it's on the moment you run the installer. Adding a teammate later is a one-line SQL toggle; see [SETUP.md](SETUP.md#one-instance-one-owner).
+
+The same codebase can also power a hosted MegaChat instance, switched on by three env vars self-hosters can just ignore: `HOSTED_MODE` (turns on activation gating), `DAILY_DM_CAP` (per-workspace daily send quota), and `ENCRYPTION_KEY` (encrypts stored API keys at rest). None of it removes or gates a feature — it's deployment configuration, not an open-core split. Leave all three unset and you get the full app, every feature, forever.
+
+API keys (Zernio, AI Gateway) are written to the database server-side only — never directly from the browser — and can optionally be encrypted at rest by setting `ENCRYPTION_KEY` before you save them.
 
 ## How it works
 
@@ -85,7 +95,7 @@ scripts/      setup.mjs (installer) + smoke-test.mjs
 
 ## Part of the Megaphone system
 
-MegaChat catches the DMs. [Megaphone](https://rodmanor.com) makes the videos that get the comments. They're built to run together, but MegaChat is fully standalone — no account, no upsell wall, MIT licensed.
+MegaChat catches the DMs. [Megaphone](https://rodmanor.com) makes the videos that get the comments. They're built to run together, but MegaChat is fully standalone — no account, no upsell wall, MIT licensed. You can also find it on the [Rod Manor downloads page](https://rodmanor.com/downloads).
 
 ## Credits
 

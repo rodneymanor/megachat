@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { FlowLoadError, resumeSession } from "@/lib/flow-engine/engine";
+import { isWorkspaceActive } from "@/lib/billing";
 import type { Json } from "@/lib/types/database";
 
 // Signals the handler to skip retry/backoff and route straight to the
@@ -355,6 +356,16 @@ async function processJob(
           );
         }
         return;
+      }
+
+      // Hosted-mode billing gate: a resume for a workspace that went inactive
+      // between scheduling and now must not keep running the flow. Route
+      // through SessionCancelError so the existing failed+settle path cancels
+      // the session cleanly instead of retrying 3x with backoff first.
+      if (!(await isWorkspaceActive(supabase, payload.workspaceId))) {
+        throw new SessionCancelError(
+          `session ${payload.sessionId} resume skipped: workspace inactive`
+        );
       }
 
       // The session moved past the delay node. That alone does not mean the

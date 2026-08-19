@@ -369,6 +369,12 @@ async function main() {
       say("    the README (or `vercel deploy`). Add the same NEXT_PUBLIC_SUPABASE_URL,");
       say("    NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, and");
       say("    CRON_SECRET values in Vercel -> Project -> Settings -> Environment Variables.\n");
+      say("  One instance, one owner:");
+      say("    This instance is single-tenant by default -- the first account you");
+      say("    register becomes the owner, and further signups are blocked at the");
+      say("    database. To open signups (multi-user / hosted), run this in the");
+      say(`    Supabase SQL editor: ${cyan("update instance_config set allow_signups = true;")}`);
+      say(`    Run ${cyan("update instance_config set allow_signups = false;")} to close them again.\n`);
     }
   } finally {
     process.off("SIGINT", cancel);

@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/types/database";
 import { executeFlow } from "@/lib/flow-engine/engine";
-import { createZernioClient } from "@/lib/zernio-client";
+import { createZernioClient, DmQuotaExceededError } from "@/lib/zernio-client";
+import { getQuotaContext } from "@/lib/billing";
+import { tryDecryptSecret } from "@/lib/crypto";
 
 type Channel = Database["public"]["Tables"]["channels"]["Row"];
 type Trigger = Database["public"]["Tables"]["triggers"]["Row"];
@@ -175,9 +177,15 @@ export async function processComment({
         .eq("id", channel.workspace_id)
         .single();
 
-      if (workspace?.late_api_key_encrypted) {
+      // tryDecryptSecret never throws (e.g. on an ENCRYPTION_KEY mismatch) —
+      // a failed decrypt just skips the public reply below, the same as no
+      // key being configured, instead of aborting the conversations
+      // upsert / executeFlow path further down.
+      const zernioKey = tryDecryptSecret(workspace?.late_api_key_encrypted ?? null);
+      if (zernioKey) {
         try {
-          const zernio = createZernioClient(workspace.late_api_key_encrypted);
+          const quota = await getQuotaContext(supabase, channel.workspace_id);
+          const zernio = createZernioClient(zernioKey, quota);
           await zernio.comments.replyToInboxPost({
             path: { postId: comment.postId },
             body: {
@@ -188,7 +196,14 @@ export async function processComment({
           });
           replySent = true;
         } catch (err) {
-          console.error("Failed to post comment reply:", err);
+          // No flow session exists here to cancel (this is the public-comment
+          // reply, not the DM), so there is nothing to settle — just skip the
+          // reply and log distinctly from a real API failure.
+          if (err instanceof DmQuotaExceededError) {
+            console.warn("Skipped comment reply: daily DM quota exceeded for workspace", channel.workspace_id);
+          } else {
+            console.error("Failed to post comment reply:", err);
+          }
         }
       }
     }

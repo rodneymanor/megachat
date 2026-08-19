@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createZernioClient } from "@/lib/zernio-client";
+import { requireActiveWorkspace } from "@/lib/billing";
+import { getWorkspaceZernioKey } from "@/lib/secrets";
 
 async function getWorkspace(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -8,9 +10,12 @@ async function getWorkspace(supabase: Awaited<ReturnType<typeof createClient>>) 
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // Migration 00020 revoked `workspaces(*)` for anon/authenticated — select
+  // only the grant-readable columns needed here. late_api_key_encrypted is
+  // fetched separately via lib/secrets.ts with the service client.
   const { data: membership } = await supabase
     .from("workspace_members")
-    .select("workspace_id, workspaces(*)")
+    .select("workspace_id, workspaces(id, name, slug)")
     .eq("user_id", user.id)
     .limit(1)
     .single();
@@ -36,6 +41,11 @@ export async function DELETE(
   if (!workspace)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const serviceClient = await createServiceClient();
+
+  const billingBlock = await requireActiveWorkspace(serviceClient, workspace.id);
+  if (billingBlock) return billingBlock;
+
   const { data: channel } = await supabase
     .from("channels")
     .select("id, late_account_id")
@@ -46,8 +56,9 @@ export async function DELETE(
   if (!channel)
     return NextResponse.json({ error: "Channel not found" }, { status: 404 });
 
-  if (workspace.late_api_key_encrypted) {
-    const zernio = createZernioClient(workspace.late_api_key_encrypted);
+  const zernioKey = await getWorkspaceZernioKey(serviceClient, workspace.id);
+  if (zernioKey) {
+    const zernio = createZernioClient(zernioKey);
     try {
       const res = await zernio.accounts.deleteAccount({
         path: { accountId: channel.late_account_id },

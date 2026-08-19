@@ -12,10 +12,13 @@ import {
   Sparkles,
   Server,
 } from "lucide-react";
+import { signupsAllowed } from "@/lib/instance-config";
 
 const GITHUB_URL = "https://github.com/rodneymanor/megachat";
 
-export default function Home() {
+export default async function Home() {
+  const open = await signupsAllowed();
+
   return (
     <div className="min-h-screen bg-[#0C0B0B] text-[#F2EFEA]">
       {/* Nav */}
@@ -42,10 +45,10 @@ export default function Home() {
               Log in
             </Link>
             <Link
-              href="/register"
+              href={open ? "/register" : "/login"}
               className="rounded-lg bg-[#FF3A1D] px-4 py-2 text-sm font-medium text-[#2A0A05] hover:bg-[#E22E14]"
             >
-              Get started free
+              {open ? "Get started free" : "Sign in"}
             </Link>
           </div>
         </div>
@@ -75,10 +78,10 @@ export default function Home() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
-              href="/register"
+              href={open ? "/register" : "/login"}
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF3A1D] px-6 py-3 text-sm font-medium text-[#2A0A05] shadow-sm hover:bg-[#E22E14] sm:w-auto"
             >
-              Get started free
+              {open ? "Get started free" : "Sign in"}
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <Link
@@ -320,10 +323,10 @@ export default function Home() {
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link
-                  href="/register"
+                  href={open ? "/register" : "/login"}
                   className="inline-flex items-center gap-2 rounded-lg bg-[#FF3A1D] px-6 py-3 text-sm font-medium text-[#2A0A05] hover:bg-[#E22E14]"
                 >
-                  Get started free
+                  {open ? "Get started free" : "Sign in"}
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
                 <Link

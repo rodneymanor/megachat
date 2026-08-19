@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createZernioClient } from "@/lib/zernio-client";
 import {
   ensureWebhookRegistered,
@@ -7,6 +7,8 @@ import {
 } from "@/lib/zernio-webhook";
 import { backfillInboxConversations } from "@/lib/inbox-sync";
 import { isSupportedPlatform } from "@/lib/platforms";
+import { requireActiveWorkspace } from "@/lib/billing";
+import { getWorkspaceZernioKey } from "@/lib/secrets";
 
 async function getWorkspace(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -14,9 +16,12 @@ async function getWorkspace(supabase: Awaited<ReturnType<typeof createClient>>) 
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // Migration 00020 revoked `workspaces(*)` for anon/authenticated — select
+  // only the grant-readable columns needed here. late_api_key_encrypted and
+  // webhook_secret are fetched/written separately with the service client.
   const { data: membership } = await supabase
     .from("workspace_members")
-    .select("workspace_id, workspaces(*)")
+    .select("workspace_id, workspaces(id, name, slug)")
     .eq("user_id", user.id)
     .limit(1)
     .single();
@@ -38,14 +43,20 @@ export async function POST() {
   if (!workspace)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!workspace.late_api_key_encrypted) {
+  const serviceClient = await createServiceClient();
+
+  const billingBlock = await requireActiveWorkspace(serviceClient, workspace.id);
+  if (billingBlock) return billingBlock;
+
+  const zernioKey = await getWorkspaceZernioKey(serviceClient, workspace.id);
+  if (!zernioKey) {
     return NextResponse.json(
       { error: "Zernio API key not configured. Go to Settings first." },
       { status: 400 }
     );
   }
 
-  const zernio = createZernioClient(workspace.late_api_key_encrypted);
+  const zernio = createZernioClient(zernioKey);
 
   try {
     const res = await zernio.accounts.listAccounts();
@@ -136,7 +147,7 @@ export async function POST() {
     // registration only happened in the Settings test-key flow (#12).
     // Best-effort: a failure must not block the channel sync.
     try {
-      const secret = await getOrCreateWorkspaceWebhookSecret(supabase, workspace.id);
+      const secret = await getOrCreateWorkspaceWebhookSecret(serviceClient, workspace.id);
       await ensureWebhookRegistered(zernio, {
         appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
         secret,

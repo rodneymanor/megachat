@@ -75,6 +75,7 @@ export interface Database {
           ai_api_key: string | null;
           ai_provider: string;
           global_keywords: Json | null;
+          webhook_secret: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -86,6 +87,7 @@ export interface Database {
           ai_api_key?: string | null;
           ai_provider?: string;
           global_keywords?: Json | null;
+          webhook_secret?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -97,6 +99,7 @@ export interface Database {
           ai_api_key?: string | null;
           ai_provider?: string;
           global_keywords?: Json | null;
+          webhook_secret?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -1072,6 +1075,86 @@ export interface Database {
           },
         ];
       };
+      instance_config: {
+        Row: {
+          id: number;
+          allow_signups: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          allow_signups?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          allow_signups?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      workspace_billing: {
+        Row: {
+          workspace_id: string;
+          status: string;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          current_period_end: string | null;
+          dm_daily_cap: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          workspace_id: string;
+          status?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          current_period_end?: string | null;
+          dm_daily_cap?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          current_period_end?: string | null;
+          dm_daily_cap?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_billing_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: true;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workspace_usage: {
+        Row: {
+          workspace_id: string;
+          day: string;
+          dm_count: number;
+        };
+        Insert: {
+          workspace_id: string;
+          day: string;
+          dm_count?: number;
+        };
+        Update: {
+          dm_count?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_usage_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1095,6 +1178,17 @@ export interface Database {
           b_id: string;
         };
         Returns: undefined;
+      };
+      signups_allowed: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      consume_dm_quota: {
+        Args: {
+          ws_id: string;
+          cap: number;
+        };
+        Returns: boolean;
       };
     };
     Enums: {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireActiveWorkspace } from "@/lib/billing";
 
 export async function POST(
   _request: NextRequest,
@@ -24,6 +25,12 @@ export async function POST(
 
   if (!membership)
     return NextResponse.json({ error: "No workspace" }, { status: 404 });
+
+  const billingBlock = await requireActiveWorkspace(
+    await createServiceClient(),
+    membership.workspace_id
+  );
+  if (billingBlock) return billingBlock;
 
   // Get the version
   const { data: version, error: vErr } = await supabase

@@ -18,7 +18,9 @@ import type {
 } from "./types";
 import { executeAiResponse } from "./nodes/ai-response";
 import { adaptMessage } from "./platform-adapter";
-import { createZernioClient } from "@/lib/zernio-client";
+import { createZernioClient, DmQuotaExceededError } from "@/lib/zernio-client";
+import { getQuotaContext } from "@/lib/billing";
+import { getWorkspaceZernioKey } from "@/lib/secrets";
 
 export async function executeFlow(
   supabase: SupabaseClient<Database>,
@@ -281,8 +283,38 @@ async function traverseNodes(
     metadata: { nodeId: node.id, nodeType: node.type },
   });
 
-  // Execute the node
-  const result = await executeNode(supabase, node, context, sessionId);
+  // Execute the node. This is the single call path shared by both
+  // executeFlow's initial traversal and resumeSession's continuation, so it
+  // is the one place a DmQuotaExceededError (thrown by the rethrow
+  // discipline in executeSendMessage/executeCommentReply/executePrivateReply/
+  // sendFirstMessageAsPrivateReply/executeAiResponse) needs to be caught.
+  // Cancel cleanly and swallow it here — quota exhaustion is a settle, not a
+  // retryable failure: IG's 24h messaging window makes next-day sends
+  // undeliverable anyway, and letting it propagate to the cron handler would
+  // trigger a 3x backoff retry against an already-cancelled session.
+  let result: string | void;
+  try {
+    result = await executeNode(supabase, node, context, sessionId);
+  } catch (error) {
+    if (error instanceof DmQuotaExceededError) {
+      console.warn(
+        `Flow session ${sessionId} cancelled: daily DM quota exceeded for workspace ${context.workspaceId}`
+      );
+      await supabase
+        .from("flow_sessions")
+        .update({ status: "cancelled" })
+        .eq("id", sessionId);
+      await supabase.from("analytics_events").insert({
+        workspace_id: context.workspaceId,
+        flow_id: context.flowId,
+        contact_id: context.contactId,
+        event_type: "message_failed",
+        metadata: { reason: "dm_quota_exceeded" },
+      });
+      return;
+    }
+    throw error;
+  }
 
   // Persist variables written by output-producing nodes so they survive
   // pauses (resumeSession reloads them from the session row).
@@ -410,6 +442,8 @@ async function sendFirstMessageAsPrivateReply(
       event_type: "message_sent",
     });
   } catch (error) {
+    if (error instanceof DmQuotaExceededError) throw error;
+
     console.error("Failed to send comment-context message as private reply:", error);
     await supabase.from("messages").insert({
       conversation_id: context.conversationId,
@@ -434,15 +468,11 @@ async function executeSendMessage(
   context: FlowExecutionContext
 ) {
   // Get workspace for API key
-  const { data: workspace } = await supabase
-    .from("workspaces")
-    .select("late_api_key_encrypted")
-    .eq("id", context.workspaceId)
-    .single();
+  const zernioKey = await getWorkspaceZernioKey(supabase, context.workspaceId);
+  if (!zernioKey) return;
 
-  if (!workspace?.late_api_key_encrypted) return;
-
-  const zernio = createZernioClient(workspace.late_api_key_encrypted);
+  const quota = await getQuotaContext(supabase, context.workspaceId);
+  const zernio = createZernioClient(zernioKey, quota);
 
   // Resolve late_account_id from channel if not in context
   let lateAccountId = context.lateAccountId;
@@ -549,6 +579,8 @@ async function executeSendMessage(
         event_type: "message_sent",
       });
     } catch (error) {
+      if (error instanceof DmQuotaExceededError) throw error;
+
       console.error("Failed to send message:", error);
       await supabase.from("messages").insert({
         conversation_id: context.conversationId,
@@ -862,15 +894,11 @@ async function executeCommentReply(
   data: CommentReplyNodeData,
   context: FlowExecutionContext
 ) {
-  const { data: workspace } = await supabase
-    .from("workspaces")
-    .select("late_api_key_encrypted")
-    .eq("id", context.workspaceId)
-    .single();
+  const zernioKey = await getWorkspaceZernioKey(supabase, context.workspaceId);
+  if (!zernioKey) return;
 
-  if (!workspace?.late_api_key_encrypted) return;
-
-  const zernio = createZernioClient(workspace.late_api_key_encrypted);
+  const quota = await getQuotaContext(supabase, context.workspaceId);
+  const zernio = createZernioClient(zernioKey, quota);
 
   // Resolve late_account_id
   let lateAccountId = context.lateAccountId;
@@ -902,6 +930,8 @@ async function executeCommentReply(
       body: { accountId: lateAccountId, message: text, commentId },
     });
   } catch (error) {
+    if (error instanceof DmQuotaExceededError) throw error;
+
     console.error("Failed to post comment reply:", error);
   }
 }
@@ -915,15 +945,11 @@ async function executePrivateReply(
   data: PrivateReplyNodeData,
   context: FlowExecutionContext
 ) {
-  const { data: workspace } = await supabase
-    .from("workspaces")
-    .select("late_api_key_encrypted")
-    .eq("id", context.workspaceId)
-    .single();
+  const zernioKey = await getWorkspaceZernioKey(supabase, context.workspaceId);
+  if (!zernioKey) return;
 
-  if (!workspace?.late_api_key_encrypted) return;
-
-  const zernio = createZernioClient(workspace.late_api_key_encrypted);
+  const quota = await getQuotaContext(supabase, context.workspaceId);
+  const zernio = createZernioClient(zernioKey, quota);
 
   // Resolve late_account_id
   let lateAccountId = context.lateAccountId;
@@ -966,6 +992,8 @@ async function executePrivateReply(
       status: "sent",
     });
   } catch (error) {
+    if (error instanceof DmQuotaExceededError) throw error;
+
     console.error("Failed to send private reply:", error);
     await supabase.from("messages").insert({
       conversation_id: context.conversationId,

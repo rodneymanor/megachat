@@ -20,7 +20,14 @@ import { cn } from "@/lib/utils";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import type { Database } from "@/lib/types/database";
 
-type Workspace = Database["public"]["Tables"]["workspaces"]["Row"];
+// Migration 00020 revoked browser-side access to the workspaces table's
+// secret columns, so getWorkspace() (lib/workspace.ts) now returns a
+// narrowed row. Sidebar only ever forwards `workspace` to WorkspaceSwitcher,
+// which needs just id/name, so match that narrower shape here too.
+type Workspace = Pick<
+  Database["public"]["Tables"]["workspaces"]["Row"],
+  "id" | "name" | "slug" | "ai_provider" | "global_keywords" | "created_at" | "updated_at"
+>;
 
 interface WorkspaceItem {
   id: string;

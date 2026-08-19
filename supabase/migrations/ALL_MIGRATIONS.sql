@@ -1033,3 +1033,220 @@ ALTER TABLE channels DROP CONSTRAINT IF EXISTS channels_platform_check;
 ALTER TABLE channels ADD CONSTRAINT channels_platform_check
   CHECK (platform IN ('facebook', 'instagram', 'twitter', 'telegram', 'bluesky', 'reddit', 'whatsapp'));
 
+
+-- ============================================================
+-- MIGRATION 17: INSTANCE CONFIG SIGNUP GATE
+-- ============================================================
+-- Self-host default: a MegaChat instance is single-tenant. The first account
+-- to sign up owns it; every signup after that is rejected at the database
+-- level. This is the only place registration can actually be stopped --
+-- register/page.tsx calls supabase.auth.signUp / signInWithOAuth straight
+-- from the browser (email AND OAuth), so an env flag or middleware check
+-- can't block it. Hosted deployments flip allow_signups to true once
+-- billing is wired (docs: reopen via
+-- `update instance_config set allow_signups = true;`).
+create table instance_config (
+  id int primary key default 1 check (id = 1),
+  allow_signups boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+insert into instance_config (id) values (1) on conflict do nothing;
+
+alter table instance_config enable row level security;
+-- No policies: this table is service-role only, never read or written from
+-- the browser.
+revoke all on table instance_config from anon, authenticated;
+
+-- ============================================================
+-- SIGNUP GATE
+-- ============================================================
+-- Signups are allowed when this is the very first user on the instance
+-- (bootstrap: someone has to be able to create the first account) or when
+-- an operator has explicitly opened the instance up (hosted mode).
+create or replace function public.signups_allowed()
+returns boolean as $$
+  select (select count(*) from auth.users) = 0
+    or coalesce((select allow_signups from public.instance_config where id = 1), false);
+$$ language sql security definer set search_path = public;
+
+-- Postgres grants EXECUTE on new functions to PUBLIC by default; revoking
+-- from anon/authenticated alone does NOT remove that PUBLIC grant, so it
+-- must be revoked explicitly too, or any logged-in user could still call
+-- this via the PUBLIC role.
+revoke execute on function public.signups_allowed() from public, anon, authenticated;
+grant execute on function public.signups_allowed() to service_role;
+
+-- BEFORE INSERT so the incoming row isn't counted yet -- the very first
+-- signup on a fresh instance always passes. This is deliberately separate
+-- from handle_new_user() (00001), which runs AFTER INSERT and swallows all
+-- exceptions on its own (raise log + return new); a gate raised from there
+-- would never actually block anything.
+create or replace function public.gate_signups()
+returns trigger as $$
+begin
+  -- Serializes concurrent signups on this instance so two simultaneous first
+  -- signups can't both observe `count(*) = 0` and both pass; the lock is
+  -- held for the rest of this transaction and released automatically.
+  perform pg_advisory_xact_lock(hashtext('megachat_signup_gate'));
+  if not public.signups_allowed() then
+    raise exception 'Signups are disabled on this instance';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create trigger gate_signups_before_insert
+  before insert on auth.users
+  for each row execute function public.gate_signups();
+
+-- Same PUBLIC-grant treatment as signups_allowed() above, for consistency.
+-- The trigger itself keeps firing regardless (trigger invocation isn't
+-- gated by the inserting role's EXECUTE privilege on the trigger function).
+revoke execute on function public.gate_signups() from public, anon, authenticated;
+grant execute on function public.gate_signups() to service_role;
+
+-- ============================================================
+-- MIGRATION 18: WORKSPACE BILLING
+-- ============================================================
+-- Hosted-mode paid-activation state, keyed to a workspace. Kept out of the
+-- workspaces table (and out of RLS entirely) because workspaces UPDATE is
+-- member-writable from the browser today -- billing status must not be
+-- something a member can flip themselves. Written by a future Stripe
+-- webhook and, until then, scripts/activate-workspace.mjs -- both
+-- service-role only. Self-host builds never read this table (isWorkspaceActive
+-- is always true when not in hosted mode).
+create table workspace_billing (
+  workspace_id uuid primary key references workspaces(id) on delete cascade,
+  status text not null default 'inactive' check (status in ('inactive', 'active', 'past_due', 'cancelled')),
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  current_period_end timestamptz,
+  dm_daily_cap int,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create trigger set_updated_at before update on workspace_billing for each row execute function update_updated_at();
+
+alter table workspace_billing enable row level security;
+-- No policies: service-role only, same reasoning as instance_config (00017).
+revoke all on table workspace_billing from anon, authenticated;
+
+-- ============================================================
+-- MIGRATION 19: WORKSPACE USAGE QUOTA
+-- ============================================================
+-- Per-workspace, per-UTC-day DM counter for the hosted daily send cap.
+-- Service-role only -- members never read or write this directly; it's
+-- maintained solely through consume_dm_quota() below.
+create table workspace_usage (
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  day date not null,
+  dm_count int not null default 0,
+  primary key (workspace_id, day)
+);
+
+alter table workspace_usage enable row level security;
+revoke all on table workspace_usage from anon, authenticated;
+
+-- ============================================================
+-- CONSUME DM QUOTA
+-- ============================================================
+-- Atomically increments today's send counter for a workspace and reports
+-- whether the send is allowed, in a single statement so there's no
+-- check-then-increment race between concurrent sends. On a fresh row the
+-- insert itself is the "consume" (cap >= 1 is guaranteed by the guard
+-- below, so starting at dm_count = 1 is always valid); on an existing row
+-- the on-conflict update only applies -- and therefore only counts as
+-- FOUND -- while the current count is still under the cap.
+--
+-- cap <= 0 or null is a defensive fail-closed guard, not the "no cap"
+-- path: callers resolve an actual cap (workspace_billing.dm_daily_cap or
+-- DAILY_DM_CAP) before calling this at all, and skip calling it entirely
+-- when no cap applies. If this function is ever invoked without a usable
+-- cap, refuse the send rather than silently allowing unlimited sends.
+create or replace function public.consume_dm_quota(ws_id uuid, cap int)
+returns boolean as $$
+begin
+  if cap is null or cap <= 0 then
+    return false;
+  end if;
+
+  insert into workspace_usage (workspace_id, day, dm_count)
+  values (ws_id, (now() at time zone 'utc')::date, 1)
+  on conflict (workspace_id, day) do update
+    set dm_count = workspace_usage.dm_count + 1
+    where workspace_usage.dm_count < cap;
+
+  return found;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+-- Postgres grants EXECUTE on new functions to PUBLIC by default; revoking
+-- from anon/authenticated alone does NOT remove that PUBLIC grant. Without
+-- this, any logged-in user could call rpc("consume_dm_quota", { ws_id: X,
+-- cap: 1 }) via the PUBLIC role and burn another workspace's daily quota.
+revoke execute on function public.consume_dm_quota(uuid, int) from public, anon, authenticated;
+grant execute on function public.consume_dm_quota(uuid, int) to service_role;
+
+-- ============================================================
+
+-- ============================================================
+-- MIGRATION 20: WORKSPACES COLUMN PRIVILEGES
+-- ============================================================
+-- `workspaces` holds three secret columns alongside ordinary settings:
+-- `late_api_key_encrypted` (Zernio API key), `ai_api_key` (AI Gateway key),
+-- and `webhook_secret` (HMAC secret for verifying inbound webhooks). RLS on
+-- this table is row-level only (any workspace member can select/update any
+-- row they belong to) with no column restriction, so every member's browser
+-- session -- via the anon/authenticated Postgres role used by the cookie
+-- client -- can read and overwrite all three secrets directly through
+-- PostgREST. That's the vulnerability this migration closes.
+--
+-- Fix: revoke table-level select/insert/update from anon/authenticated
+-- entirely, then re-grant only on the specific columns the app legitimately
+-- reads/writes from the browser. Secret columns are simply never listed in
+-- any grant, so they disappear from PostgREST's schema cache for these
+-- roles -- `select *` and `workspaces(*)` embeds now error for anon/
+-- authenticated instead of leaking the columns.
+--
+-- service_role is completely unaffected: it bypasses grants (and RLS) the
+-- same way it already bypasses RLS elsewhere in this schema, so all
+-- server-side reads/writes of the secret columns (lib/secrets.ts, the flow
+-- engine, comment processor, webhook route, cron) continue to work via the
+-- service client.
+--
+-- Column-level grants layer on top of the existing row-level policies from
+-- 00002 (select/update gated by is_workspace_member); a member still only
+-- sees/updates rows for workspaces they belong to, now restricted to a
+-- safe column subset.
+
+revoke select, insert, update on table workspaces from anon, authenticated;
+
+-- Safe to read from the browser: no secrets.
+grant select (
+  id,
+  name,
+  slug,
+  ai_provider,
+  global_keywords,
+  created_at,
+  updated_at
+) on workspaces to authenticated;
+
+-- Safe to write from the browser: workspace name and global keyword rules.
+-- Key fields (late_api_key_encrypted, ai_api_key) and webhook_secret must go
+-- through server-side routes using the service client (see
+-- app/api/v1/workspace/keys/route.ts and lib/secrets.ts).
+grant update (name, global_keywords) on workspaces to authenticated;
+
+-- Workspace creation only ever sets name + slug; every other column is
+-- server-defaulted or set later via the key-write route. (Note: there is
+-- still no INSERT RLS policy on workspaces, so `createWorkspace` in
+-- lib/actions/workspace.ts remains blocked regardless -- a known,
+-- deliberately deferred issue, not something this migration needs to fix.)
+grant insert (name, slug) on workspaces to authenticated;
+
+-- anon (logged-out) never needs any access to workspaces.
+
+notify pgrst, 'reload schema';

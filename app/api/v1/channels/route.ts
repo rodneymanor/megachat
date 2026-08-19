@@ -7,9 +7,11 @@ async function getWorkspace(supabase: Awaited<ReturnType<typeof createClient>>) 
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // Migration 00020 revoked `workspaces(*)` for anon/authenticated — select
+  // only the grant-readable columns needed here (id, for membership scope).
   const { data: membership } = await supabase
     .from("workspace_members")
-    .select("workspace_id, workspaces(*)")
+    .select("workspace_id, workspaces(id, name, slug)")
     .eq("user_id", user.id)
     .limit(1)
     .single();

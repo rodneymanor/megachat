@@ -85,6 +85,9 @@ export function AiResponsePanel({ data: rawData, onChange }: AiResponsePanelProp
           </a>
           . Format: provider/model-name
         </p>
+        <p className="mt-1 text-[11px] text-muted-foreground/60">
+          Uses the AI Gateway key configured in Settings.
+        </p>
       </div>
 
       {/* Temperature */}

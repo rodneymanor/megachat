@@ -8,6 +8,7 @@ import { upsertContactForSender } from "@/lib/inbox-sync";
 import { processComment } from "@/lib/comment-processor";
 import type { Database } from "@/lib/types/database";
 import { messagePreview } from "@/lib/message-preview";
+import { isWorkspaceActive } from "@/lib/billing";
 
 // ── Zernio API webhook payload ───────────────────────────────────────────────
 
@@ -268,7 +269,13 @@ async function processMessageEvent(
 
   // ── Flow engine ───────────────────────────────────────────────────────────
 
-  if (!conversation.is_automation_paused) {
+  // Inbox ingestion (contact + conversation upsert above) always happens, even
+  // in hosted mode with a billing-inactive workspace; only trigger matching,
+  // flow execution, and global keywords are gated here — one check that
+  // covers all three (isWorkspaceActive is always true on self-host).
+  const active = await isWorkspaceActive(supabase, channel.workspace_id);
+
+  if (!conversation.is_automation_paused && active) {
     const incomingMessage = {
       text: msg.text || undefined,
       postbackPayload: metadata?.postbackPayload || undefined,
@@ -361,19 +368,27 @@ async function handleCommentWebhook(
   // redeliveries of the same comment stay one-shot.
   after(async () => {
     try {
-      await processComment({
-        supabase,
-        channel,
-        comment: {
-          id: payload.comment.id,
-          // Native posts (not published through Zernio) have a null postId; fall
-          // back to the platform post id so flows still run. Zernio's private-reply
-          // endpoint only needs the comment id, so the placeholder is harmless.
-          postId: payload.comment.postId || payload.comment.platformPostId,
-          text: payload.comment.text,
-          author: payload.comment.author,
-        },
-      });
+      // Comments have no separate inbox-ingestion step of their own (unlike
+      // messages) — processComment IS the trigger match + flow exec, so
+      // gating it here in hosted mode with an inactive workspace is
+      // sufficient; nothing is lost to ingest first. Checked inside after()
+      // so nothing billing-related runs before the 200 ack goes out.
+      const active = await isWorkspaceActive(supabase, channel.workspace_id);
+      if (active) {
+        await processComment({
+          supabase,
+          channel,
+          comment: {
+            id: payload.comment.id,
+            // Native posts (not published through Zernio) have a null postId; fall
+            // back to the platform post id so flows still run. Zernio's private-reply
+            // endpoint only needs the comment id, so the placeholder is harmless.
+            postId: payload.comment.postId || payload.comment.platformPostId,
+            text: payload.comment.text,
+            author: payload.comment.author,
+          },
+        });
+      }
     } catch (err) {
       console.error("Webhook comment processing error:", err);
     }
