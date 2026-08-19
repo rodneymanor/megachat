@@ -31,6 +31,8 @@ yarn-error.log*
 # env files
 .env
 .env*.local
+.env.backup
+.env.backup.*
 
 # vercel
 .vercel
@@ -39,3 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 supabase/.temp
+
+# local editor / agent config
+.claude/
