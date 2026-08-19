@@ -73,6 +73,14 @@ if (HELP) {
   process.exit(0);
 }
 
+// Readline over piped stdin answers the first prompt, then exits 0 without
+// finishing -- a false success. Require a real terminal instead.
+if (!process.stdin.isTTY) {
+  err("This installer is interactive and needs a real terminal (stdin is not a TTY).");
+  info("Run `node scripts/setup.mjs` directly in a terminal, without piping input.");
+  process.exit(1);
+}
+
 // ---------------------------------------------------------------------------
 // Validation (loose on purpose -- self-hosters may have custom domains,
 // and Supabase has shipped more than one API key format over the years)

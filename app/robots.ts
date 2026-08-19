@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/dashboard/", "/api/", "/invite/"],
+        disallow: ["/dashboard/", "/api/"],
       },
     ],
     sitemap: "https://github.com/rodneymanor/megachat/sitemap.xml",

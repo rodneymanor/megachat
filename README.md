@@ -42,6 +42,8 @@ npm run dev
 
 `npm run setup` is an interactive installer: it walks you through grabbing your Supabase credentials, runs all database migrations for you, and writes your `.env`. No SQL editor, no copy-pasting migration files.
 
+> **Why do some migrations mention sequences, broadcasts, or WhatsApp?** MegaChat keeps its database schema identical to upstream [ZernFlow](https://github.com/zernio-dev/zernflow), so upstream fixes merge cleanly. Tables for features this build doesn't ship just sit empty — they cost nothing.
+
 Then open [http://localhost:3000](http://localhost:3000):
 
 1. Register an account
