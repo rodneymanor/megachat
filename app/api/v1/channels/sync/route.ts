@@ -9,6 +9,7 @@ import { backfillInboxConversations } from "@/lib/inbox-sync";
 import { isSupportedPlatform } from "@/lib/platforms";
 import { requireActiveWorkspace } from "@/lib/billing";
 import { getWorkspaceZernioKey } from "@/lib/secrets";
+import { getPublicAppUrl } from "@/lib/config";
 
 async function getWorkspace(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -149,7 +150,7 @@ export async function POST() {
     try {
       const secret = await getOrCreateWorkspaceWebhookSecret(serviceClient, workspace.id);
       await ensureWebhookRegistered(zernio, {
-        appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        appUrl: getPublicAppUrl(),
         secret,
         events: ["message.received", "comment.received"],
       });

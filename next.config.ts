@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**" },
     ],
   },
+  outputFileTracingIncludes: {
+    "/api/setup/migrate": ["./supabase/migrations/*.sql"],
+  },
 };
 
 export default nextConfig;

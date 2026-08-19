@@ -13,10 +13,13 @@ import {
   Server,
 } from "lucide-react";
 import { signupsAllowed } from "@/lib/instance-config";
+import { isSupabaseConfigured } from "@/lib/config";
+import { redirect } from "next/navigation";
 
 const GITHUB_URL = "https://github.com/rodneymanor/megachat";
 
 export default async function Home() {
+  if (!isSupabaseConfigured()) redirect("/setup");
   const open = await signupsAllowed();
 
   return (
@@ -358,6 +361,12 @@ export default async function Home() {
             >
               <Github className="h-3.5 w-3.5" />
               GitHub
+            </Link>
+            <Link
+              href="/setup"
+              className="text-sm text-[#F2EFEA]/40 hover:text-[#F2EFEA]/62"
+            >
+              Setup guide
             </Link>
             <Link
               href="https://zernio.com"

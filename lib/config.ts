@@ -21,3 +21,38 @@ export function getDefaultDmCap(): number | undefined {
   if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
   return parsed;
 }
+
+function hasRealValue(value: string | undefined): value is string {
+  if (!value?.trim()) return false;
+  return !/(placeholder|changeme|(^|:\/\/)your[-_ ])/i.test(value);
+}
+
+/** True when the three Supabase runtime values needed by the app are present. */
+export function isSupabaseConfigured(): boolean {
+  return (
+    hasRealValue(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    hasRealValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) &&
+    hasRealValue(process.env.SUPABASE_SERVICE_ROLE_KEY)
+  );
+}
+
+/**
+ * Public origin used for OAuth callbacks and webhooks.
+ *
+ * Vercel exposes the production URL automatically, so self-hosters do not
+ * need to discover their URL, add another variable, and redeploy a second
+ * time. NEXT_PUBLIC_APP_URL remains an explicit custom-domain override.
+ */
+export function getPublicAppUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+  if (explicit && !/(placeholder|changeme|(^|:\/\/)your[-_ ])/i.test(explicit)) {
+    return explicit;
+  }
+
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
+    process.env.VERCEL_URL?.trim();
+  if (vercelHost) return `https://${vercelHost.replace(/^https?:\/\//, "").replace(/\/$/, "")}`;
+
+  return "http://localhost:3000";
+}

@@ -4,6 +4,7 @@ import { createZernioClient } from "@/lib/zernio-client";
 import { PLATFORMS, isSupportedPlatform } from "@/lib/platforms";
 import { requireActiveWorkspace } from "@/lib/billing";
 import { getWorkspaceZernioKey } from "@/lib/secrets";
+import { getPublicAppUrl } from "@/lib/config";
 
 async function getWorkspace(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     const profileId = profiles[0]._id!;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = getPublicAppUrl();
     const callbackUrl = `${appUrl}/dashboard/channels/callback`;
 
     // Zernio handles everything: OAuth, page selection, Bluesky credentials, Telegram code

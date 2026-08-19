@@ -12,10 +12,18 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  // A first Deploy-button build intentionally has no Supabase values yet.
+  // Middleware sends runtime visits to /setup, while this guard keeps static
+  // prerendering from constructing an invalid browser client during the build.
+  const hasBrowserConfig = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+  const supabase = hasBrowserConfig ? createClient() : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) return;
     setLoading(true);
     setError(null);
 
@@ -35,6 +43,7 @@ export default function LoginPage() {
   }
 
   async function handleGitHubLogin() {
+    if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
@@ -42,6 +51,8 @@ export default function LoginPage() {
       },
     });
   }
+
+  if (!supabase) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0C0B0B] px-4 text-[#F2EFEA]">

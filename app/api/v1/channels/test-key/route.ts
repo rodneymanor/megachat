@@ -9,6 +9,7 @@ import { backfillInboxConversations } from "@/lib/inbox-sync";
 import { isSupportedPlatform } from "@/lib/platforms";
 import { requireActiveWorkspace } from "@/lib/billing";
 import { encryptSecret } from "@/lib/crypto";
+import { getPublicAppUrl } from "@/lib/config";
 
 /**
  * POST /api/v1/channels/test-key
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
     // block saving the key or syncing channels.
     try {
       const secret = await getOrCreateWorkspaceWebhookSecret(serviceClient, workspaceId);
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const appUrl = getPublicAppUrl();
       const zernio = createZernioClient(apiKey.trim());
       await ensureWebhookRegistered(zernio, {
         appUrl,

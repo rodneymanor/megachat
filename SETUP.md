@@ -2,27 +2,50 @@
 
 **Total time: ~10 minutes. Total cost: $0.**
 
-You'll create two free accounts, run one command, and answer four questions in the terminal. This page tells you exactly what the terminal will ask for and exactly where to find each answer — so you can have everything ready before you start.
+The easiest route is browser-only: deploy MegaChat, open its setup page, and paste four values from Supabase. The page links directly to every provider screen, initializes the database, generates the remaining secrets, and prepares one block to paste into Vercel.
 
 ---
 
 ## Before you start
 
-You need three things:
+You need three free accounts:
 
 | What | Where | Cost |
 |---|---|---|
-| **Node.js 18+** | [nodejs.org](https://nodejs.org) (download the LTS version) | Free |
 | **A Supabase project** | [supabase.com/dashboard](https://supabase.com/dashboard) → **New project** | Free tier |
 | **A Zernio account** | [zernio.com](https://zernio.com) → sign up | Free up to 2 Instagram accounts |
+| **A Vercel account** | [vercel.com](https://vercel.com) → continue with GitHub | Free Hobby tier |
 
 **Supabase** is your database — it stores your contacts, conversations, and flows. **Zernio** is the Instagram layer — it handles Meta's OAuth, tokens, and webhooks so you never touch the Meta developer console.
 
-> **Create the Supabase project first.** It takes ~2 minutes to provision, and when you create it you'll set a **database password** — save it, you'll need it in Step 4 below.
+> **Create the Supabase project first.** It takes about two minutes to provision. Save the **database password** you choose; the final setup field needs it.
 
 ---
 
-## Run the installer
+## Browser setup (recommended)
+
+1. Click the [Deploy with Vercel button](README.md#megachat). Vercel asks you to sign in, creates your own Git repository copy, and deploys MegaChat.
+2. Click **Visit** when the deployment finishes. Because the deployment has no Supabase values yet, MegaChat opens `/setup` automatically.
+3. Keep your Supabase project open. Use the direct link beside each setup field to copy the matching value.
+4. Click **Initialize database**. The Postgres URI goes only to your own MegaChat deployment, which runs the repository's fixed, idempotent migrations and does not retain the URI.
+5. Click **Copy Vercel values**.
+6. In Vercel, choose the new MegaChat project, then open **Settings → Environment Variables**. Paste the entire copied block, apply it to Production, Preview, and Development, and save.
+7. If Vercel already has a deployment, accept its **Redeploy** prompt. If it says **No Production Deployment**, the project was connected without an initial build; import the repository with **Add New → Project** or push `main` to create that first deployment. Environment changes only take effect in a new deployment.
+8. Open MegaChat again and register the owner account.
+
+MegaChat automatically uses Vercel's production URL for webhooks and OAuth callbacks. You do not need to discover the URL or add `NEXT_PUBLIC_APP_URL` unless you intentionally want to force a custom domain.
+
+### What the setup page does with secrets
+
+- The publishable key, secret key, generated cron secret, and generated encryption key stay in the browser until you copy them to Vercel.
+- The Postgres connection URI is sent once over HTTPS to your own deployment to install the database schema. It is not written to an environment variable, database table, log, or browser storage.
+- The migration endpoint only accepts Supabase database hosts and only executes MegaChat's checked-in migration files.
+
+---
+
+## Local terminal setup (alternative)
+
+Local setup requires [Node.js 18+](https://nodejs.org). Clone the repository and run:
 
 ```bash
 git clone https://github.com/rodneymanor/megachat.git
@@ -31,13 +54,13 @@ npm install
 npm run setup
 ```
 
-`npm run setup` is an interactive installer. It asks four questions, then does everything else itself — generates your cron secret, runs every database migration, and writes your `.env` file. No SQL editor, no copy-pasting config.
+`npm run setup` asks for the same four Supabase values, generates a cron secret, runs every migration, and writes `.env`. No SQL editor is required.
 
 ---
 
-## The four things the terminal will ask for
+## The four Supabase values
 
-All four come from your Supabase dashboard. Keep it open in a browser tab.
+The web setup page and terminal installer use the same four values.
 
 ### 1. Project URL
 
@@ -48,37 +71,37 @@ All four come from your Supabase dashboard. Keep it open in a browser tab.
 
 Copy the **Project URL** at the top of the page. It looks like `https://abcdefgh.supabase.co`.
 
-### 2. Anon / publishable key
+### 2. Publishable key (or legacy anon key)
 
 > `anon / publishable key`
 
 **Where:** Supabase dashboard → **Project Settings → API Keys**
 **Direct link:** [supabase.com/dashboard/project/_/settings/api-keys](https://supabase.com/dashboard/project/_/settings/api-keys)
 
-Copy the key labeled **anon** (older projects) or **publishable** (newer projects — starts with `sb_publishable_`). Either works. This key is safe to expose to browsers.
+Copy the **Publishable key** (starts with `sb_publishable_`). Older projects can use the legacy **anon** key. Both are intended for browser use.
 
-### 3. Service role / secret key
+### 3. Secret key (or legacy service_role key)
 
 > `service_role / secret key`
 
 **Where:** Same page as #2 — [supabase.com/dashboard/project/_/settings/api-keys](https://supabase.com/dashboard/project/_/settings/api-keys)
 
-Copy the key labeled **service_role** (click to reveal it) or **secret** (starts with `sb_secret_`). This one is private — the installer masks it as you paste, and it only ever lives in your `.env`.
+Copy a **Secret key** (starts with `sb_secret_`). Older projects can use the legacy **service_role** key. This value is private and belongs only in Vercel or a local ignored environment file.
 
-### 4. Postgres connection string
+### 4. Postgres Session pooler URI
 
 > `Postgres connection string (URI, direct or pooler)`
 
 **Where:** Supabase dashboard → click the **Connect** button at the top of the page → **Connection String** tab
 **Direct link:** [supabase.com/dashboard/project/_/settings/database](https://supabase.com/dashboard/project/_/settings/database)
 
-Copy the **URI** — it looks like `postgresql://postgres:[YOUR-PASSWORD]@db.abcdefgh.supabase.co:5432/postgres`. Replace `[YOUR-PASSWORD]` with the database password you set when you created the project.
+Choose **Session pooler** on port **5432** and copy the URI. It looks like `postgresql://postgres.project:[YOUR-PASSWORD]@aws-0-region.pooler.supabase.com:5432/postgres`. Replace `[YOUR-PASSWORD]` with the database password you set when you created the project.
 
 > **Forgot your database password?** Reset it on the same page ([Settings → Database](https://supabase.com/dashboard/project/_/settings/database)) — it takes 10 seconds and doesn't break anything.
 >
-> Either the **direct** connection or the **session pooler** URI works. If you're on a network without IPv6 (most home networks), use the **session pooler** one.
+> The Session pooler works over IPv4 from both Vercel and most home networks. The web setup deliberately rejects the transaction pooler on port 6543.
 
-That's it. The installer generates your `CRON_SECRET` itself, applies all database migrations, and writes `.env`. When it finishes:
+The local installer generates `CRON_SECRET`, applies all database migrations, and writes `.env`. When it finishes:
 
 ```bash
 npm run dev
@@ -108,7 +131,7 @@ The AI Response flow node is bring-your-own-key. Create a key at [vercel.com/ai-
 
 Your deployment is public on the internet. Without a gate, anyone who found your URL could register on it and use it as their own — your Supabase, your Zernio quota, your DMs. So by default, this instance is **single-tenant**: the first account you register becomes the owner, and the database blocks every signup after that (email and GitHub OAuth both).
 
-You don't need to configure anything for this — it's on from the moment you run the installer. The `/register` page just redirects to `/login` once an owner exists.
+You don't need to configure anything for this — it is enabled when the database is initialized. The `/register` page redirects to `/login` once an owner exists.
 
 Adding a teammate later? Open signups temporarily in the Supabase SQL editor:
 
@@ -124,21 +147,51 @@ update instance_config set allow_signups = false;
 
 ---
 
-## Deploy to Vercel (so it runs while your laptop is closed)
+## Upload your own MegaChat repository to Vercel
 
-Running locally is fine for testing, but comment-to-DM needs to be online 24/7. Vercel's free Hobby plan handles it:
+Use this path when you modified MegaChat locally and want Vercel to deploy your version. The Deploy button is easier for an unchanged copy.
 
-1. Push your clone to your own GitHub repository (or use the **Deploy with Vercel** button in the [README](README.md)).
-2. When Vercel asks for environment variables, copy the values from the `.env` file the installer wrote: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`.
-3. After the first deploy, set `NEXT_PUBLIC_APP_URL` to your Vercel URL (e.g. `https://your-app.vercel.app`) and redeploy.
+### 1. Put the repository on GitHub
 
-> **Note on the migrations:** the deploy button sets env vars but can't run database migrations — run `npm run setup` locally once first (you already did if you followed this page top to bottom).
->
-> **Note on the cron:** flow **Delay** steps are fired by a scheduler cron. On Vercel's free Hobby plan, crons run once a day — instant replies and comment-to-DM work perfectly either way; only long Delay steps get batched. Every-minute delays need Vercel Pro.
+1. Sign in to [GitHub](https://github.com) and click **New repository**.
+2. Name it `megachat`, choose **Private** or **Public**, and create it without adding a README or `.gitignore`.
+3. A normal MegaChat clone already has an `origin` remote. Point it at the empty repository you just created, then push:
 
-### Optional: encrypt your API keys
+   ```bash
+   git remote set-url origin https://github.com/YOUR-NAME/megachat.git
+   git branch -M main
+   git push -u origin main
+   ```
 
-By default your Zernio and AI Gateway keys are stored as plaintext in your own Supabase project — normal for a self-host, since it's your database. If you'd rather they sit encrypted at rest, set an `ENCRYPTION_KEY` env var before you save any keys in Settings:
+   If Git says `No such remote 'origin'`, use `git remote add origin https://github.com/YOUR-NAME/megachat.git` instead. Confirm the destination is the new empty repository before pushing.
+
+### 2. Import it into Vercel
+
+1. Open the [Vercel dashboard](https://vercel.com/dashboard) and click **Add New → Project**.
+2. Find the new `megachat` GitHub repository and click **Import**.
+3. Leave the detected framework and build settings unchanged. Do not add environment variables yet.
+4. Click **Deploy**. The first deployment is intentionally unconfigured and routes to `/setup`.
+5. Open the deployment and complete the [browser setup](#browser-setup-recommended). After the wizard runs migrations, paste its generated block into **Settings → Environment Variables** and redeploy.
+
+Every future push to `main` creates a new production deployment automatically. Pull-request branches get preview deployments when the same environment values are enabled for Preview.
+
+> Do not create an empty Vercel project and connect Git afterward without running a first build. Vercel cannot redeploy a project that has no deployment record. If that happens, push a new commit to `main`; the connected Git repository will create the initial production deployment.
+
+### Scheduler behavior on Vercel
+
+Flow **Delay** steps use the cron in `vercel.json`. The repository defaults to one daily run (`0 3 * * *`) because that is the fastest schedule accepted by Vercel Hobby. Instant replies and comment-to-DM do not use this cron and remain instant.
+
+On Vercel Pro, change the schedule to every minute and push the commit:
+
+```json
+{
+  "crons": [{ "path": "/api/cron/jobs", "schedule": "* * * * *" }]
+}
+```
+
+### API-key encryption
+
+The browser setup generates `ENCRYPTION_KEY` automatically, so Zernio and AI Gateway keys are encrypted at rest from first use. If you used the local terminal installer, encryption is optional; generate a key before saving provider keys:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
