@@ -14,11 +14,18 @@ export const WORKSPACE_COOKIE = "megachat_workspace_id";
 // webhook_secret) are deliberately excluded; use lib/secrets.ts for those
 // via the service client instead.
 const SAFE_WORKSPACE_COLUMNS =
-  "id, name, slug, ai_provider, global_keywords, created_at, updated_at" as const;
+  "id, name, slug, ai_provider, global_keywords, onboarding_completed_at, created_at, updated_at" as const;
 
 type WorkspaceRow = Pick<
   Database["public"]["Tables"]["workspaces"]["Row"],
-  "id" | "name" | "slug" | "ai_provider" | "global_keywords" | "created_at" | "updated_at"
+  | "id"
+  | "name"
+  | "slug"
+  | "ai_provider"
+  | "global_keywords"
+  | "onboarding_completed_at"
+  | "created_at"
+  | "updated_at"
 >;
 
 /**

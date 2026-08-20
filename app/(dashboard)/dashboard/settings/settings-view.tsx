@@ -17,13 +17,23 @@ import {
   Sparkles,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  serializeGlobalKeywords,
+  type GlobalKeywordAction,
+  type GlobalKeywordRule,
+} from "@/lib/global-keywords";
+
+const ACTION_LABELS: Record<GlobalKeywordAction, string> = {
+  unsubscribe: "Unsubscribe them",
+  subscribe: "Resubscribe them",
+};
 
 interface WorkspaceSettings {
   id: string;
   name: string;
   hasApiKey: boolean;
   hasAiKey: boolean;
-  globalKeywords: string[];
+  globalKeywords: GlobalKeywordRule[];
   hostedMode: boolean;
 }
 
@@ -43,8 +53,11 @@ export function SettingsView({
   const [showApiKey, setShowApiKey] = useState(false);
   const [aiKey, setAiKey] = useState("");
   const [showAiKey, setShowAiKey] = useState(false);
-  const [keywords, setKeywords] = useState<string[]>(workspace.globalKeywords);
+  const [keywords, setKeywords] = useState<GlobalKeywordRule[]>(
+    workspace.globalKeywords
+  );
   const [newKeyword, setNewKeyword] = useState("");
+  const [newAction, setNewAction] = useState<GlobalKeywordAction>("unsubscribe");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,18 +65,26 @@ export function SettingsView({
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
   function addKeyword() {
-    const trimmed = newKeyword.trim().toLowerCase();
-    if (!trimmed) return;
-    if (keywords.includes(trimmed)) {
-      setNewKeyword("");
-      return;
-    }
-    setKeywords((prev) => [...prev, trimmed]);
+    const keyword = newKeyword.trim().toLowerCase();
+    if (!keyword) return;
+    setKeywords((prev) =>
+      prev.some((k) => k.keyword === keyword)
+        ? prev.map((k) =>
+            k.keyword === keyword ? { keyword, action: newAction } : k
+          )
+        : [...prev, { keyword, action: newAction }]
+    );
     setNewKeyword("");
   }
 
-  function removeKeyword(kw: string) {
-    setKeywords((prev) => prev.filter((k) => k !== kw));
+  function setKeywordAction(keyword: string, action: GlobalKeywordAction) {
+    setKeywords((prev) =>
+      prev.map((k) => (k.keyword === keyword ? { ...k, action } : k))
+    );
+  }
+
+  function removeKeyword(keyword: string) {
+    setKeywords((prev) => prev.filter((k) => k.keyword !== keyword));
   }
 
   async function handleTestConnection() {
@@ -124,7 +145,7 @@ export function SettingsView({
         .from("workspaces")
         .update({
           name: name.trim(),
-          global_keywords: keywords,
+          global_keywords: serializeGlobalKeywords(keywords),
         })
         .eq("id", workspace.id)
         .select("id")
@@ -329,6 +350,12 @@ export function SettingsView({
               to access OpenAI, Anthropic, and Google models with a single key.
               {workspace.hasAiKey && " A key is currently configured."}
             </p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Available on every Vercel plan, the free one included: each team gets
+              $5/month of gateway credits, then it is pay-as-you-go at provider list
+              price. Routing your own OpenAI or Anthropic key through the gateway
+              (BYOK) is the one part that requires a paid Vercel plan.
+            </p>
 
             <div className="mt-4 relative">
               <input
@@ -372,11 +399,22 @@ export function SettingsView({
               <h2 className="text-sm font-semibold">Global Keywords</h2>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Keywords that trigger flows across all channels. Flow-specific triggers take priority over global keywords.
+              A global keyword is one exact word a contact can DM you to control their
+              own subscription. When their message is exactly that word, MegaChat runs
+              the action and stops — no flow runs for that message. Everything else
+              goes to your flow triggers as usual.
+            </p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">What to do:</span> type the
+              word, choose what it should do, and press Add. Most workspaces add exactly
+              two: <code className="rounded bg-muted px-1 py-0.5">stop</code> to
+              unsubscribe and <code className="rounded bg-muted px-1 py-0.5">start</code>{" "}
+              to resubscribe. Matching ignores case and surrounding spaces, but the whole
+              message has to be the keyword — &ldquo;please stop&rdquo; does not match.
             </p>
 
             {/* Keyword input */}
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <input
                 type="text"
                 value={newKeyword}
@@ -387,12 +425,25 @@ export function SettingsView({
                     addKeyword();
                   }
                 }}
-                placeholder="Add a keyword..."
+                placeholder="e.g. stop"
+                aria-label="Keyword"
                 className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
+              <select
+                value={newAction}
+                onChange={(e) =>
+                  setNewAction(e.target.value as GlobalKeywordAction)
+                }
+                aria-label="What this keyword does"
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="unsubscribe">{ACTION_LABELS.unsubscribe}</option>
+                <option value="subscribe">{ACTION_LABELS.subscribe}</option>
+              </select>
               <button
                 onClick={addKeyword}
                 disabled={!newKeyword.trim()}
+                aria-label="Add keyword"
                 className="rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 <Plus className="h-4 w-4" />
@@ -401,25 +452,61 @@ export function SettingsView({
 
             {/* Keyword list */}
             {keywords.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {keywords.map((kw) => (
-                  <span
-                    key={kw}
-                    className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium"
+              <ul className="mt-3 space-y-2">
+                {keywords.map((rule) => (
+                  <li
+                    key={rule.keyword}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2"
                   >
-                    {kw}
-                    <button
-                      onClick={() => removeKeyword(kw)}
-                      className="ml-0.5 rounded-full p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">
+                        {rule.keyword}
+                      </code>
+                      <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+                        {rule.action
+                          ? ACTION_LABELS[rule.action]
+                          : "No action set — this keyword is ignored"}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <select
+                        value={rule.action ?? ""}
+                        onChange={(e) =>
+                          setKeywordAction(
+                            rule.keyword,
+                            e.target.value as GlobalKeywordAction
+                          )
+                        }
+                        aria-label={`What "${rule.keyword}" does`}
+                        className="rounded-lg border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {rule.action === null && (
+                          <option value="" disabled>
+                            Choose an action
+                          </option>
+                        )}
+                        <option value="unsubscribe">
+                          {ACTION_LABELS.unsubscribe}
+                        </option>
+                        <option value="subscribe">
+                          {ACTION_LABELS.subscribe}
+                        </option>
+                      </select>
+                      <button
+                        onClick={() => removeKeyword(rule.keyword)}
+                        aria-label={`Remove ${rule.keyword}`}
+                        className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
               <p className="mt-3 text-xs text-muted-foreground/70">
-                No global keywords configured
+                No global keywords yet — contacts have no way to unsubscribe
+                themselves until you add one.
               </p>
             )}
           </section>

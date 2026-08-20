@@ -76,6 +76,7 @@ export interface Database {
           ai_provider: string;
           global_keywords: Json | null;
           webhook_secret: string | null;
+          onboarding_completed_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -88,6 +89,7 @@ export interface Database {
           ai_provider?: string;
           global_keywords?: Json | null;
           webhook_secret?: string | null;
+          onboarding_completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -100,6 +102,7 @@ export interface Database {
           ai_provider?: string;
           global_keywords?: Json | null;
           webhook_secret?: string | null;
+          onboarding_completed_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];

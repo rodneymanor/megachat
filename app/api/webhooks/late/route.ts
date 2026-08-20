@@ -9,6 +9,10 @@ import { processComment } from "@/lib/comment-processor";
 import type { Database } from "@/lib/types/database";
 import { messagePreview } from "@/lib/message-preview";
 import { isWorkspaceActive } from "@/lib/billing";
+import {
+  matchGlobalKeyword,
+  normalizeGlobalKeywords,
+} from "@/lib/global-keywords";
 
 // ── Zernio API webhook payload ───────────────────────────────────────────────
 
@@ -415,33 +419,14 @@ async function handleGlobalKeywords(
 
   if (!workspace?.global_keywords) return false;
 
-  const keywords = workspace.global_keywords as Array<{
-    keyword: string;
-    action?: string;
-    flowId?: string;
-  }>;
+  const rules = normalizeGlobalKeywords(workspace.global_keywords);
+  const match = matchGlobalKeyword(rules, text);
+  if (!match) return false;
 
-  const normalizedText = text.toLowerCase().trim();
+  await supabase
+    .from("contacts")
+    .update({ is_subscribed: match.action === "subscribe" })
+    .eq("id", contactId);
 
-  for (const kw of keywords) {
-    if (normalizedText === kw.keyword.toLowerCase()) {
-      if (kw.action === "unsubscribe") {
-        await supabase
-          .from("contacts")
-          .update({ is_subscribed: false })
-          .eq("id", contactId);
-        return true;
-      }
-      if (kw.action === "subscribe") {
-        await supabase
-          .from("contacts")
-          .update({ is_subscribed: true })
-          .eq("id", contactId);
-        return true;
-      }
-      return false;
-    }
-  }
-
-  return false;
+  return true;
 }

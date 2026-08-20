@@ -2,6 +2,7 @@ import { getWorkspace } from "@/lib/workspace";
 import { isHostedMode } from "@/lib/config";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getWorkspaceSecretStatus } from "@/lib/secrets";
+import { normalizeGlobalKeywords } from "@/lib/global-keywords";
 import { SettingsView } from "./settings-view";
 
 export default async function SettingsPage() {
@@ -23,7 +24,7 @@ export default async function SettingsPage() {
         name: workspace.name,
         hasApiKey: hasZernioKey,
         hasAiKey,
-        globalKeywords: (workspace.global_keywords as string[]) ?? [],
+        globalKeywords: normalizeGlobalKeywords(workspace.global_keywords),
         hostedMode: isHostedMode(),
       }}
     />
