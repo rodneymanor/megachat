@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "./sign-out-button";
@@ -33,6 +34,13 @@ export default async function LockedPage() {
         </div>
 
         <SignOutButton />
+
+        <Link
+          href="/setup"
+          className="inline-flex text-sm font-medium text-[#F2EFEA]/70 underline decoration-[#F2EFEA]/25 underline-offset-4 transition-colors hover:text-[#F2EFEA]"
+        >
+          Self-hosting? Open setup to fix this lockout
+        </Link>
       </div>
     </div>
   );

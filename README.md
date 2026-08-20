@@ -78,7 +78,7 @@ The included `vercel.json` uses one daily scheduler run so deployment succeeds o
 
 Your deployment is public on the internet, so by default it's **single-tenant**: the first account you register becomes the owner, and the database blocks every signup after that — email and GitHub OAuth both. Without this, anyone who found your URL could register on it and start burning your Supabase and Zernio quota. Nothing to configure — it's on the moment you run the installer. Adding a teammate later is a one-line SQL toggle; see [SETUP.md](SETUP.md#one-instance-one-owner).
 
-The same codebase can also power a hosted MegaChat instance, switched on by two env vars self-hosters can ignore: `HOSTED_MODE` (turns on activation gating) and `DAILY_DM_CAP` (per-workspace daily send quota). Neither removes or gates a feature — they are deployment configuration, not an open-core split. Leave them unset and you get the full app, every feature, forever.
+The same codebase can also power a hosted MegaChat instance, switched on by two env vars: `HOSTED_MODE` (turns on activation gating) and `DAILY_DM_CAP` (per-workspace daily send quota). Neither removes or gates a feature — they are deployment configuration, not an open-core split. The self-host setup block explicitly sets `HOSTED_MODE=false`; do not change it to `true`, or new workspaces will require a separate hosted billing record and redirect to `/locked`.
 
 API keys (Zernio, AI Gateway) are written to the database server-side only. `ENCRYPTION_KEY` encrypts them at rest; the web setup generates this value automatically, while local terminal setups can add it optionally.
 

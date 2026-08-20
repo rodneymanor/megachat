@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getPublicAppUrl, isSupabaseConfigured } from "@/lib/config";
+import { getPublicAppUrl, isHostedMode, isSupabaseConfigured } from "@/lib/config";
 import SetupWizard from "./setup-wizard";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export default function SetupPage() {
   return (
     <SetupWizard
       configured={isSupabaseConfigured()}
+      hostedMode={isHostedMode()}
       publicAppUrl={getPublicAppUrl()}
     />
   );

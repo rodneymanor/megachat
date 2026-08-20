@@ -207,6 +207,7 @@ Paste the output in as `ENCRYPTION_KEY` and redeploy (or restart `npm run dev`).
 
 ## Troubleshooting
 
+- **"This workspace isn't active yet" / `/locked`** — hosted billing mode was enabled on a self-hosted deployment. Open Vercel → **Settings → Environment Variables**, set `HOSTED_MODE=false` (or remove it), and redeploy. The generated self-host environment block includes the safe `false` value automatically. The workspace already exists; no database repair or second signup is needed.
 - **The installer rejects my key** — it validates formats before writing anything. Supabase keys are either long JWTs (start with `eyJ`) or new-style `sb_publishable_...` / `sb_secret_...` keys. Make sure you copied the whole thing.
 - **"Run directly in a terminal"** — the installer needs a real interactive terminal; it won't accept piped input.
 - **Want to check before committing?** `node scripts/setup.mjs --dry-run` validates your inputs and lists the migrations without touching your database.

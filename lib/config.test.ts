@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getPublicAppUrl, isSupabaseConfigured } from "./config";
+import { getPublicAppUrl, isHostedMode, isSupabaseConfigured } from "./config";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -20,6 +20,16 @@ describe("isSupabaseConfigured", () => {
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "your-service-role-key");
 
     expect(isSupabaseConfigured()).toBe(false);
+  });
+});
+
+describe("isHostedMode", () => {
+  it("only enables activation gating for the exact value true", () => {
+    vi.stubEnv("HOSTED_MODE", "true");
+    expect(isHostedMode()).toBe(true);
+
+    vi.stubEnv("HOSTED_MODE", "false");
+    expect(isHostedMode()).toBe(false);
   });
 });
 

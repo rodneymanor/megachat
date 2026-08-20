@@ -52,6 +52,7 @@ interface MigrationResult {
 
 interface SetupWizardProps {
   configured: boolean;
+  hostedMode: boolean;
   publicAppUrl: string;
 }
 
@@ -195,6 +196,7 @@ function buildEnvironmentBlock(values: SetupValues, cronSecret: string, encrypti
     `SUPABASE_SERVICE_ROLE_KEY=${values.secretKey.trim()}`,
     `CRON_SECRET=${cronSecret}`,
     `ENCRYPTION_KEY=${encryptionKey}`,
+    "HOSTED_MODE=false",
   ].join("\n");
 }
 
@@ -219,7 +221,7 @@ function ProgressItem({ number, label, state }: { number: number; label: string;
   );
 }
 
-export default function SetupWizard({ configured, publicAppUrl }: SetupWizardProps) {
+export default function SetupWizard({ configured, hostedMode, publicAppUrl }: SetupWizardProps) {
   const [values, setValues] = useState<SetupValues>(EMPTY_VALUES);
   const [errors, setErrors] = useState<SetupErrors>({});
   const [migration, setMigration] = useState<MigrationResult | null>(null);
@@ -348,6 +350,17 @@ export default function SetupWizard({ configured, publicAppUrl }: SetupWizardPro
                 <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--setup-muted-text)]">
                   The first registered account becomes this instance&apos;s owner. Additional public signups are blocked automatically.
                 </p>
+                {hostedMode ? (
+                  <div role="alert" className="mt-6 rounded-lg border border-[var(--setup-danger)]/45 bg-[var(--setup-danger-soft)] p-4 text-sm leading-6 text-[var(--setup-danger)] sm:p-5">
+                    <h3 className="font-bold">Hosted activation mode is blocking this self-hosted instance</h3>
+                    <p className="mt-2">
+                      In Vercel → Settings → Environment Variables, set <code>HOSTED_MODE=false</code> or remove the variable, then redeploy. When it is <code>true</code>, MegaChat expects a separate paid-activation record and sends new workspaces to <code>/locked</code>.
+                    </p>
+                    <div className="mt-3">
+                      <ExternalLink href={LINKS.vercel}>Open Vercel dashboard</ExternalLink>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-6 rounded-lg border border-[var(--setup-border)] bg-[var(--setup-background)] p-4 sm:p-5">
                   <h3 className="font-bold">Allow this deployment in Supabase Auth</h3>
                   {isLocalAppUrl ? (
