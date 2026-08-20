@@ -31,6 +31,7 @@ const LINKS = {
   dataApi: "https://supabase.com/dashboard/project/_/settings/api",
   apiKeys: "https://supabase.com/dashboard/project/_/settings/api-keys",
   database: "https://supabase.com/dashboard/project/_/settings/database",
+  authUrls: "https://supabase.com/dashboard/project/_/auth/url-configuration",
   vercel: "https://vercel.com/dashboard",
   deploy:
     "https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Frodneymanor%2Fmegachat&project-name=megachat&repository-name=megachat",
@@ -51,6 +52,7 @@ interface MigrationResult {
 
 interface SetupWizardProps {
   configured: boolean;
+  publicAppUrl: string;
 }
 
 interface SetupFieldProps {
@@ -78,6 +80,33 @@ function ExternalLink({ href, children }: { href: string; children: React.ReactN
       {children}
       <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
     </a>
+  );
+}
+
+function CopyableSetting({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyValue() {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2_000);
+  }
+
+  return (
+    <div className="rounded-lg border border-[var(--setup-border)] bg-[var(--setup-background)] p-3.5">
+      <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--setup-faint-text)]">{label}</p>
+      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <code className="break-all text-xs leading-5 text-[var(--setup-text)]">{value}</code>
+        <button
+          type="button"
+          onClick={copyValue}
+          className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-[var(--setup-border)] px-3 text-xs font-semibold text-[var(--setup-text)] transition-colors hover:bg-[var(--setup-surface-raised)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--setup-accent)]"
+        >
+          {copied ? <Check aria-hidden="true" className="h-3.5 w-3.5" /> : <Clipboard aria-hidden="true" className="h-3.5 w-3.5" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -190,7 +219,7 @@ function ProgressItem({ number, label, state }: { number: number; label: string;
   );
 }
 
-export default function SetupWizard({ configured }: SetupWizardProps) {
+export default function SetupWizard({ configured, publicAppUrl }: SetupWizardProps) {
   const [values, setValues] = useState<SetupValues>(EMPTY_VALUES);
   const [errors, setErrors] = useState<SetupErrors>({});
   const [migration, setMigration] = useState<MigrationResult | null>(null);
@@ -206,6 +235,8 @@ export default function SetupWizard({ configured }: SetupWizardProps) {
   );
 
   const currentStep = configured ? 3 : migration ? 2 : 1;
+  const isLocalAppUrl = /^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i.test(publicAppUrl);
+  const authCallbackUrl = `${publicAppUrl.replace(/\/$/, "")}/auth/callback`;
 
   function updateValue(key: keyof SetupValues, value: string) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -317,6 +348,27 @@ export default function SetupWizard({ configured }: SetupWizardProps) {
                 <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--setup-muted-text)]">
                   The first registered account becomes this instance&apos;s owner. Additional public signups are blocked automatically.
                 </p>
+                <div className="mt-6 rounded-lg border border-[var(--setup-border)] bg-[var(--setup-background)] p-4 sm:p-5">
+                  <h3 className="font-bold">Allow this deployment in Supabase Auth</h3>
+                  {isLocalAppUrl ? (
+                    <p className="mt-2 text-sm leading-6 text-[var(--setup-muted-text)]">
+                      This page is running locally. Deploy MegaChat first, then open <code>/setup</code> on the production domain. Do not use localhost as the production Site URL.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-sm leading-6 text-[var(--setup-muted-text)]">
+                        Before registering, open Supabase → Authentication → URL Configuration. Set the Site URL and add the Redirect URL below. Supabase otherwise falls back to localhost when it rejects an unapproved callback.
+                      </p>
+                      <div className="mt-4 grid gap-3">
+                        <CopyableSetting label="Site URL" value={publicAppUrl} />
+                        <CopyableSetting label="Redirect URL" value={authCallbackUrl} />
+                      </div>
+                      <div className="mt-4">
+                        <ExternalLink href={LINKS.authUrls}>Open Supabase Auth URL Configuration</ExternalLink>
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Link href="/register" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--setup-success)] px-5 py-2.5 text-sm font-bold text-[var(--setup-accent-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--setup-success)]">
                     Register owner account <KeyRound aria-hidden="true" className="h-4 w-4" />
@@ -334,7 +386,7 @@ export default function SetupWizard({ configured }: SetupWizardProps) {
             <ol className="flex flex-wrap gap-x-6 gap-y-3 lg:flex-col lg:gap-5">
               <ProgressItem number={1} label="Connect Supabase" state={currentStep > 1 ? "done" : "active"} />
               <ProgressItem number={2} label="Copy deployment values" state={currentStep > 2 ? "done" : currentStep === 2 ? "active" : "next"} />
-              <ProgressItem number={3} label="Deploy and register" state={currentStep === 3 ? "active" : "next"} />
+              <ProgressItem number={3} label="Deploy, allow auth, register" state={currentStep === 3 ? "active" : "next"} />
             </ol>
 
             <div className="mt-8 border-l-2 border-[var(--setup-border)] pl-4 text-sm leading-6 text-[var(--setup-muted-text)]">
@@ -479,7 +531,8 @@ export default function SetupWizard({ configured }: SetupWizardProps) {
                         <li><strong className="text-[var(--setup-text)]">2.</strong> Paste the copied block, apply it to Production, Preview, and Development, then save.</li>
                         <li><strong className="text-[var(--setup-text)]">3.</strong> If Vercel already has a deployment, accept the Redeploy prompt.</li>
                         <li><strong className="text-[var(--setup-text)]">4.</strong> If Vercel says <em>No Production Deployment</em>, push this repository&apos;s <code>main</code> branch to GitHub to create the first deployment. There is nothing to redeploy until that first build exists.</li>
-                        <li><strong className="text-[var(--setup-text)]">5.</strong> When the deployment finishes, open MegaChat and register the owner account.</li>
+                        <li><strong className="text-[var(--setup-text)]">5.</strong> Open <code>/setup</code> on the deployed MegaChat URL. Copy its exact Site URL and Redirect URL into Supabase → Authentication → URL Configuration.</li>
+                        <li><strong className="text-[var(--setup-text)]">6.</strong> Return to MegaChat and register the owner account.</li>
                       </ol>
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
                         <a

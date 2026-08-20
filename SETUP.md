@@ -31,9 +31,12 @@ You need three free accounts:
 5. Click **Copy Vercel values**.
 6. In Vercel, choose the new MegaChat project, then open **Settings → Environment Variables**. Paste the entire copied block, apply it to Production, Preview, and Development, and save.
 7. If Vercel already has a deployment, accept its **Redeploy** prompt. If it says **No Production Deployment**, the project was connected without an initial build; import the repository with **Add New → Project** or push `main` to create that first deployment. Environment changes only take effect in a new deployment.
+8. Open `/setup` on the deployed MegaChat domain. In **Allow this deployment in Supabase Auth**, copy the exact Site URL and Redirect URL.
+9. In Supabase, open **Authentication → URL Configuration**. Set **Site URL** to the deployed MegaChat origin and add its `/auth/callback` as a **Redirect URL**. Keep `http://localhost:3000/auth/callback` as an additional Redirect URL only if you also develop locally.
+10. Return to MegaChat and register the owner account.
 8. Open MegaChat again and register the owner account.
 
-MegaChat automatically uses Vercel's production URL for webhooks and OAuth callbacks. You do not need to discover the URL or add `NEXT_PUBLIC_APP_URL` unless you intentionally want to force a custom domain.
+MegaChat automatically requests Vercel's production URL for webhooks and OAuth callbacks. You do not need to add `NEXT_PUBLIC_APP_URL` unless you intentionally want to force a custom domain. Supabase still requires that callback to be added to **Authentication → URL Configuration**; the deployed `/setup` page displays the exact values.
 
 ### What the setup page does with secrets
 
@@ -172,6 +175,7 @@ Use this path when you modified MegaChat locally and want Vercel to deploy your 
 3. Leave the detected framework and build settings unchanged. Do not add environment variables yet.
 4. Click **Deploy**. The first deployment is intentionally unconfigured and routes to `/setup`.
 5. Open the deployment and complete the [browser setup](#browser-setup-recommended). After the wizard runs migrations, paste its generated block into **Settings → Environment Variables** and redeploy.
+6. Reopen the deployed `/setup` page and add its displayed Site URL and `/auth/callback` to Supabase **Authentication → URL Configuration** before registering.
 
 Every future push to `main` creates a new production deployment automatically. Pull-request branches get preview deployments when the same environment values are enabled for Preview.
 

@@ -38,9 +38,10 @@ No terminal or SQL editor is required.
 4. Follow the direct Supabase links beside the four fields, paste the values, and click **Initialize database**.
 5. Copy the generated environment block. In Vercel, open **Settings → Environment Variables** and paste the block for Production, Preview, and Development.
 6. If a deployment already exists, accept **Redeploy**. If Vercel says **No Production Deployment**, push `main` to GitHub (or import the repository with **Add New → Project**) to create the first deployment—an empty project cannot be redeployed.
-7. Open the deployed app, register the owner account, and add your Zernio key in **Settings**.
+7. Open `/setup` on the deployed app. Under **Allow this deployment in Supabase Auth**, copy the displayed Site URL and Redirect URL into Supabase → **Authentication → URL Configuration**.
+8. Return to MegaChat, register the owner account, and add your Zernio key in **Settings**.
 
-The setup page does not store credentials. It sends the Postgres URI once to your own deployment to run MegaChat's checked-in migrations; the other values stay in the browser until you copy them to Vercel.
+The setup page does not store credentials. It sends the Postgres URI once to your own deployment to run MegaChat's checked-in migrations; the other values stay in the browser until you copy them to Vercel. Supabase must explicitly allow your deployed `/auth/callback`; otherwise confirmation emails fall back to Supabase's Site URL, which defaults to localhost.
 
 Need to deploy a modified fork or upload this repository through GitHub? See the exact [Vercel upload steps](SETUP.md#upload-your-own-megachat-repository-to-vercel).
 
