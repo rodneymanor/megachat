@@ -42,7 +42,7 @@ export function CreateFlowButton() {
     <button
       onClick={handleCreate}
       disabled={creating}
-      className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+      className="inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background shadow-sm hover:bg-foreground/90 transition-colors disabled:opacity-50"
     >
       {creating ? (
         <Loader2 className="h-4 w-4 animate-spin" />

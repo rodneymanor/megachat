@@ -63,7 +63,7 @@ export default async function FlowsPage() {
             <ImportFlowButton />
             <Link
               href="/dashboard/flows/templates"
-              className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted transition-colors"
             >
               <Sparkles className="h-4 w-4" />
               Templates
@@ -87,7 +87,7 @@ export default async function FlowsPage() {
           </div>
           <Link
             href="/dashboard/channels"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+            className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted transition-colors"
           >
             Connect
           </Link>

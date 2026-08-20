@@ -229,7 +229,7 @@ export function ImportFlowButton() {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={importing}
-        className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted transition-colors disabled:opacity-50"
       >
         {importing ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -273,7 +273,7 @@ export function ImportFlowButton() {
               <button
                 onClick={handleConfirmImport}
                 disabled={importing}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background shadow-sm hover:bg-foreground/90 disabled:opacity-50 transition-colors"
               >
                 {importing && <Loader2 className="h-4 w-4 animate-spin" />}
                 {importing ? "Importing..." : "Import"}
